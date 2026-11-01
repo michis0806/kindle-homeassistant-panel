@@ -34,6 +34,35 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(config['columns']['sensor.a'],6)
         self.assertEqual(config['labels']['sensor.a'],'<script>bad</script>')
 
+    def test_view_badges_precede_sections_and_are_live_read_only_entities(self):
+        model=translate({'views':[{'path':'child','type':'sections','badges':[
+            {'type':'entity','entity':'sensor.temperature','name':'Temperatur','icon':'mdi:thermometer'},
+            'sensor.humidity',{'type':'entity','entity':'binary_sensor.motion'}],
+            'sections':[{'type':'grid','cards':[{'type':'thermostat','entity':'climate.child'}]}]},
+            {'path':'office','cards':[],'badges':['sensor.office']}]})
+        child=view_config({},model,'child');office=view_config({},model,'office')
+        self.assertEqual(child['entities'],['sensor.temperature','sensor.humidity','binary_sensor.motion','climate.child'])
+        self.assertEqual(child['columns']['sensor.temperature'],3)
+        self.assertEqual(child['labels']['sensor.temperature'],'Temperatur')
+        self.assertEqual(child['icons']['sensor.temperature'],'mdi:thermometer')
+        self.assertTrue(child['read_only']['sensor.humidity'])
+        self.assertEqual(model['control_entities'],['climate.child'])
+        self.assertEqual(office['entities'],['sensor.office'])
+
+    def test_badges_skip_conditions_custom_types_and_duplicate_cards(self):
+        model=translate({'views':[{'cards':[{'type':'tile','entity':'light.room'}], 'badges':[
+            {'type':'entity','entity':'light.room'},
+            {'type':'entity','entity':'sensor.hidden','visibility':[{'condition':'state'}]},
+            {'type':'entity-filter','entities':['sensor.filtered'],'conditions':[{'condition':'state'}]},
+            {'type':'custom:test','entity':'sensor.private'},
+            {'type':'entity','entity':'sensor.attribute','state_content':['temperature']},
+            'sensor.visible','sensor.visible']}]})
+        config=view_config({},model)
+        self.assertEqual(config['entities'],['sensor.visible','light.room'])
+        self.assertEqual(model['control_entities'],['light.room'])
+        self.assertEqual(len(config['entities']),len(set(config['entities'])))
+        self.assertTrue(model['warnings'])
+
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]
         def call(requests):

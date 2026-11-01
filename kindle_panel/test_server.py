@@ -285,6 +285,26 @@ class PanelTests(unittest.TestCase):
         self.assertNotIn('light.test',body)
         self.assertNotIn('light.other',body)
 
+    def test_badge_only_view_renders_and_updates_temperature_and_humidity(self):
+        token,_=self.pair();headers={'Cookie':COOKIE+'='+token}
+        self.states['sensor.humidity']={'entity_id':'sensor.humidity','state':'48','attributes':{'unit_of_measurement':'%'}}
+        model=ha_dashboard.translate({'views':[{'badges':['sensor.test','sensor.humidity'],'cards':[]}]})
+        class Source:
+            def model(self,path):return model
+        self.app.dashboard_source=Source()
+        status,_,body=self.request(self.public,headers=headers)
+        self.assertEqual(status,200)
+        self.assertIn('id="e-sensor-test-value">21</div>',body)
+        self.assertIn('id="e-sensor-humidity-value">48</div>',body)
+        self.assertIn('id="e-sensor-humidity-unit">%</span>',body)
+        self.states['sensor.humidity']['state']='51'
+        self.states['sensor.test']['state']='22.5'
+        data=json.loads(self.request(self.public,path='/updates.json',headers=headers)[2])
+        self.assertEqual(data['entities']['sensor.humidity']['state'],'51')
+        self.assertEqual(data['entities']['sensor.test']['state'],'22.5')
+        self.assertNotIn('light.test',data['entities'])
+        self.assertEqual(self.calls,[])
+
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32
         self.app.bind_controller(a,ca);self.app.bind_controller(b,cb)

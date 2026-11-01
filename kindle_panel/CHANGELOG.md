@@ -1,3 +1,7 @@
+# 0.7.1
+
+Entity-Badges einer Ansicht werden als kompakte Statuskacheln oberhalb der Panels übernommen und live aktualisiert. Unterstützt Temperatur, Luftfeuchtigkeit und binäre Zustände. Bedingte oder benutzerdefinierte Badges werden mit Hinweis ausgelassen. Bereits als Karte vorhandene Entitäten werden nicht doppelt angezeigt.
+
 # 0.7.0
 
 Mehrere Kindles mit eigenem Namen, Dashboard, Startansicht und Beenden-Signal. Home-Assistant-Dashboards als Layoutquelle, Kindle-Vorschau, kompakte Statuskacheln und unterstützte Core-Karten. Bestehende Freigaben bleiben erhalten; ein fehlendes Kindle-Dashboard wird einmalig aus der bisherigen Auswahl angelegt.

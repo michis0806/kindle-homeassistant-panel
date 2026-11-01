@@ -9,6 +9,8 @@ Beim ersten Start wird das eigene Dashboard **Kindle** (`kindle-panel`) bei Beda
 
 Sensoren und binäre Zustände sind standardmäßig ein Viertel breit, Bedienkacheln halb breit und Klimapanels ganz breit. Unterstützt werden einfache Core-Karten und Sections. Benutzerdefinierte Karten, bedingte Sichtbarkeit und spezielle Tipp-Aktionen werden nicht ausgeführt; Hinweise stehen in der App.
 
+Entity-Badges (z. B. Temperatur, Luftfeuchtigkeit und Bewegung) erscheinen als kompakte Statuskacheln oberhalb der Panels und werden live aktualisiert. Bedingte oder benutzerdefinierte Badges sowie Attributanzeigen werden mit Hinweis ausgelassen. Eine bereits als Karte vorhandene Entität wird nicht zusätzlich als Badge angezeigt.
+
 Werte aktualisieren sich alle zwei Sekunden ohne Seitenreload. Layout- und Dashboardwechsel lösen einen Reload aus. Gerätefreigaben und Zuordnungen bleiben bei Updates erhalten. Ein Kindle kann nur Entitäten seines zugewiesenen Dashboards bedienen.
 
 Für mehrere Geräte den neuen Kindle-Installer einzeln je Kindle verwenden: Er erzeugt eine eigene Kennung für das Beenden-Signal. Der bisherige Starter funktioniert weiterhin, besitzt aber noch keine unabhängige Gerätekennung. Der durchgestrichene Home-Assistant-Knopf führt mit passendem Starter zurück zur Kindle-Startseite. Die Rückkehr benötigt eine Netzwerkverbindung zur App.

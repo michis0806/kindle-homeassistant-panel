@@ -146,7 +146,25 @@ def translate(raw):
                 groups.append({'title':str(section.get('title','')),'cards':parse_cards(section.get('cards',[]))})
         else:
             groups.append({'title':'','cards':parse_cards(source.get('cards',[]))})
-        if source.get('visible') is False:continue
+        # Badges are stored on the view, outside cards/sections. Reuse the
+        # incremental entity renderer; an existing card wins over a duplicate
+        # badge so a status display cannot remove that card's controls.
+        badges=[]
+        raw_badges=source.get('badges',[])
+        if not isinstance(raw_badges,list):
+            warn('Ungültige Badge-Liste in „'+title+'“.');raw_badges=[]
+        for badge in raw_badges:
+            if isinstance(badge,str):badge={'type':'entity','entity':badge}
+            if not isinstance(badge,dict):continue
+            if badge.get('visibility') or badge.get('conditions') or badge.get('state_filter'):
+                warn('Bedingte Badges werden zur Sicherheit nicht angezeigt.');continue
+            if badge.get('type','entity')!='entity' or not valid_entity(badge.get('entity')):
+                warn('Nicht unterstütztes Badge: '+str(badge.get('type','entity')));continue
+            if badge.get('state_content','state') not in ('state',['state']):
+                warn('Badge-Attribute werden noch nicht übersetzt: '+badge['entity']);continue
+            normalized=dict(badge,type='entity',tap_action={'action':'none'},grid_options={'columns':3})
+            badges.extend(parse_cards([normalized]))
+        if badges:groups.insert(0,{'title':'','cards':badges})
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
     revision=hashlib.sha256(json.dumps(raw,sort_keys=True).encode()).hexdigest()

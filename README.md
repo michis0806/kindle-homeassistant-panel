@@ -17,7 +17,7 @@ On first start, the app creates a separate **Kindle** dashboard (`kindle-panel`)
 
 ## Layout in Home Assistant
 
-Edit the assigned dashboard with Home Assistant's dashboard editor. Sections, headings, tile, thermostat, entity, button, sensor, entities lists, and grid/horizontal/vertical stacks are translated. Supported domains: sensor, binary_sensor, climate, light, switch, input_boolean, scene and weather.
+Edit the assigned dashboard with Home Assistant's dashboard editor. Sections, headings, tile, thermostat, entity, button, sensor, entities lists, and grid/horizontal/vertical stacks are translated. Supported domains: sensor, binary_sensor, climate, light, switch, input_boolean, scene and weather. Entity badges (including legacy entity-ID strings) appear as compact read-only status tiles above the cards and update live. Existing cards take precedence over duplicate badges. Custom/conditional badges and badge attribute displays are skipped with a warning.
 
 Use a Sections view with one section column for a predictable Kindle layout. Card widths are interpreted on a 12-column grid: status tiles default to 3, controls to 6, climates to 12. Climate controls require at least 6. The renderer repaginates for the small display; it is a monochrome translation rather than a pixel-identical copy. Duplicate entities in one view are shown once.
 
