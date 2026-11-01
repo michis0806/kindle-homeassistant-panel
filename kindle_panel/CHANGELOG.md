@@ -1,3 +1,11 @@
+# 0.11.3
+
+Größere Beschriftungen an Licht-, Skript-, Cover- und Sensorkarten sowie Bereichsüberschriften. Kartenhöhen, Raster und Badges bleiben unverändert.
+
+# 0.11.2
+
+Kräftigere Grauflächen: Karten in Hellgrau, Badges und aktive Lichtkarten mittelgrau, Bedienfelder und Icon-Flächen dunkler. Schwarze Aktiv-Markierungen bleiben erhalten.
+
 # 0.11.1
 
 Ruhige Grauflächen für Karten, Badges und Bedienfelder; aktive Licht-Icons und Klimamodi mit schwarzer Fläche und weißem Symbol. Kräftigere Beschriftung und einheitlichere Rundungen. Zwölf Pixel Außenabstand in der Übersicht werden bei der Höhenwahl berücksichtigt. Eine zusätzliche 72-Pixel-Rasterstufe nutzt den verbleibenden Platz maßvoll.

@@ -95,25 +95,26 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 /* Quiet monochrome surfaces; preserve the dashboard's grid and touch sizes. */
 #dashboard-root{position:relative;padding:12px}
 #dashboard-root .layout-badge-measure{left:12px;right:12px;top:12px}
-#dashboard-root .badge-pill{background:#ededed;border-color:#d5d5d5;padding-left:8px;padding-right:8px;font-size:17px}
+#dashboard-root .badge-pill{background:#ccc;border-color:#aaa;padding-left:8px;padding-right:8px;font-size:17px}
 #dashboard-root .badge-value{font-weight:600}
-#dashboard-root .exit-button{background:#ededed;border-color:#ededed;border-radius:10px}
-#dashboard-root .tile-inner,#dashboard-root .cover-inner,#dashboard-root .climate-panel,#dashboard-root .light-button{background:#f3f3f3;border-color:#d2d2d2;border-radius:12px}
-#dashboard-root .light-button-label,#dashboard-root .cover-label,#dashboard-root .climate-panel h2{font-weight:600}
-#dashboard-root .light-button-icon{background:#dedede;border-radius:9px}
-#dashboard-root .light-button.is-on{background:#ededed;border-color:#bdbdbd}
+#dashboard-root .exit-button{background:#ccc;border-color:#ccc;border-radius:10px}
+#dashboard-root .tile-inner,#dashboard-root .cover-inner,#dashboard-root .climate-panel,#dashboard-root .light-button{background:#ddd;border-color:#aaa;border-radius:12px}
+#dashboard-root .light-button-label,#dashboard-root .cover-label,#dashboard-root .climate-panel h2,#dashboard-root .tile-label{font-weight:600}
+#dashboard-root .light-button-label,#dashboard-root .cover-label{font-size:17px}
+#dashboard-root .light-button-icon{background:#bbb;border-radius:9px}
+#dashboard-root .light-button.is-on{background:#ccc;border-color:#999}
 #dashboard-root .light-button.is-on .light-button-icon{background:#222;color:#fff}
-#dashboard-root .light-button.is-unavailable .light-button-icon{background:#e6e6e6;color:#888}
-#dashboard-root .cover-arrows button,#dashboard-root .temperature-table button{background:#dedede;border:1px solid #d5d5d5;border-radius:8px}
-#dashboard-root .cover-arrows button:disabled,#dashboard-root .temperature-table button:disabled{background:#eaeaea;border-color:#e3e3e3;color:#aaa}
-#dashboard-root .mode-buttons{background:#dedede;border-radius:8px;overflow:hidden}
-#dashboard-root .mode-button{background:#dedede;border-color:#dedede}
+#dashboard-root .light-button.is-unavailable .light-button-icon{background:#ddd;color:#888}
+#dashboard-root .cover-arrows button,#dashboard-root .temperature-table button{background:#bbb;border:1px solid #aaa;border-radius:8px}
+#dashboard-root .cover-arrows button:disabled,#dashboard-root .temperature-table button:disabled{background:#e6e6e6;border-color:#ccc;color:#aaa}
+#dashboard-root .mode-buttons{background:#bbb;border-radius:8px;overflow:hidden}
+#dashboard-root .mode-button{background:#bbb;border-color:#bbb}
 #dashboard-root .mode-button.active{background:#222;border-color:#222;color:#fff}
-#dashboard-root .mode-button:disabled{background:#e9e9e9;border-color:#e9e9e9;color:#aaa}
+#dashboard-root .mode-button:disabled{background:#e6e6e6;border-color:#e6e6e6;color:#aaa}
 #dashboard-root .mode-buttons td:first-child .mode-button{border-radius:8px 0 0 8px}
 #dashboard-root .mode-buttons td:last-child .mode-button{border-radius:0 8px 8px 0}
 #dashboard-root .climate-info{color:#555}
-#dashboard-root .tile-heading-card{font-weight:600;color:#333}
+#dashboard-root .tile-heading-card{font-size:20px;font-weight:600;color:#333}
 
 
 '''
@@ -387,7 +388,7 @@ def layout_css(blocks):
                     rule('.grid-n-'+str(row)+' '+selector,{'height':px(row*unit-8)})
         if unit==52:continue
         big=unit>=76;middle=unit in (68,72)
-        font=18 if big else 17 if middle else 16
+        font=20 if big else 19 if middle else 18
         button=unit-8;label=button-22
         rule('.light-button',{'padding':'10px 12px'})
         rule('.light-button-icon',{'width':'34px','height':px(label),'line-height':px(label),'margin-right':'10px'})
@@ -419,7 +420,7 @@ def layout_css(blocks):
         rule('.climate-more',{'font-size':px(14 if big else 13 if middle else 12),'margin-top':px(6 if big else 5 if middle else 4)})
         heading=40 if big else 36 if middle else 32
         rule('.tile-inner',{'padding':'8px'})
-        rule('.tile-label',{'font-size':px(18 if big else 16 if middle else 15),'line-height':px(heading//2),'height':px(heading)})
+        rule('.tile-label',{'font-size':px(20 if big else 19 if middle else 18),'line-height':px(heading//2),'height':px(heading)})
         rule('.tile-heading',{'height':px(heading)})
         rule('.tile-reading',{'font-size':px(38 if big else 32 if middle else 30),'line-height':px(44 if big else 36 if middle else 32)})
         rule('.tile-unit',{'font-size':px(16 if big else 15 if middle else 14),'line-height':px(20 if big else 18 if middle else 16)})
