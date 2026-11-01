@@ -13,14 +13,14 @@
         if (root.getAttribute('data-fit-headings')!==null) {
             fixed+=(Number(root.getAttribute('data-fit-headings'))||0)*28;
             var badges=root.querySelector('.layout-badge-measure');
-            if (badges) { fixed+=height(badges); }
+            fixed+=badges?Math.max(52,height(badges)):52;
         }
-        var choices=[112,96,88,80,76,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
+        var choices=[76,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
         root.setAttribute('data-layout-fixed',String(fixed));
         for (i=0;i<choices.length;i+=1) {
             if (rows*choices[i]+fixed+4<=visible) { unit=choices[i];break; }
         }
-        if ((preferred===52 || preferred===60 || preferred===68 || preferred===76 || preferred===80 || preferred===88 || preferred===96 || preferred===112) && rows*preferred+fixed+4<=visible) { unit=preferred; }
+        if ((preferred===52 || preferred===60 || preferred===68 || preferred===76) && rows*preferred+fixed+4<=visible) { unit=preferred; }
         root.className='panel dashboard layout-u'+unit+(width>=700?' layout-wide':'');
         root.setAttribute('data-layout-unit',String(unit));
         root.setAttribute('data-layout-ready','1');

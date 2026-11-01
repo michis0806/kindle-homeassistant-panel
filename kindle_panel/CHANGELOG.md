@@ -1,3 +1,7 @@
+# 0.10.4
+
+Titelzeile der Übersicht entfällt; Badges und Beenden-Symbol teilen den Kopfbereich. Badges werden beim Seitenumbruch nicht mehr zusätzlich als Kartenfläche gezählt. Moderatere gemeinsame Rasterstufen bis 76 Pixel sowie kleinere Klima- und Cover-Bedientasten. Die aktuelle Raumansicht passt auf eine Seite; explizite HA-Zeilenhöhen bleiben erhalten.
+
 # 0.10.3
 
 Kartenhöhen folgen einem gemeinsamen Raster mit größeren, zur Fensterhöhe passenden Zeilenstufen. Explizite Klima-Zeilenhöhen werden vollständig übernommen. Badges werden separat gemessen statt als vergrößerte Rasterzeilen reserviert. Cover berücksichtigen hide_state und zeigen Auf/Stopp/Zu entsprechend den Gerätefähigkeiten; Stopp wird anhand des bestätigten Zustands abgeschlossen.

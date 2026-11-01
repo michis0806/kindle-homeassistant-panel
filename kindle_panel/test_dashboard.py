@@ -132,10 +132,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('script.room',[c.get('entity') for c in pages[location]])
 
     def test_user_arranged_room_fits_one_page_and_preserves_cover_order(self):
-        raw={'views':[{'badges':['sensor.temp','sensor.humidity','binary_sensor.door','binary_sensor.window'],'type':'sections','sections':[
+        raw={'views':[{'badges':['sensor.temp','sensor.humidity','binary_sensor.door','binary_sensor.window','sensor.clock'],'type':'sections','sections':[
             {'type':'grid','cards':[{'type':'thermostat','entity':'climate.room','grid_options':{'columns':6,'rows':4}},
                 {'type':'tile','entity':'cover.window'}, {'type':'tile','entity':'cover.door'},
-                *[{'type':'tile','entity':'light.'+name} for name in ('tv','sofa','ambient','ceiling')]]},
+                *[{'type':'tile','entity':'light.'+name} for name in ('tv','sofa','ambient','ceiling','desk','bed')]]},
             {'type':'grid','cards':[{'type':'heading','heading':'Alcove'},
                 {'type':'tile','entity':'fan.alcove'},{'type':'tile','entity':'script.alcove'},
                 {'type':'tile','entity':'cover.alcove'},{'type':'tile','entity':'cover.roof'}]}]}]}
@@ -152,6 +152,8 @@ class DashboardTests(unittest.TestCase):
         markup=ui.dashboard(config,{}, {'csrf':'test'},0,30)
         self.assertIn('grid-card grid-y-0 grid-n-4',markup)
         self.assertNotIn('rowspan=',markup)
+        self.assertNotIn('<h1',markup)
+        self.assertLess(markup.index('id="e-sensor-temp-value"'),markup.index('class="dashboard-grid"'))
         self.assertIn('class="climate-info"',markup)
         self.assertNotIn('class="mode-status"',markup)
         self.assertNotIn('class="climate-more"',markup)

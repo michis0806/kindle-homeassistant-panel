@@ -30,3 +30,5 @@ Mehrseitige Ansichten reservieren eine eigene Navigationszeile und verwenden die
 Mushroom-Template-Badges unterstützen Inhalt, Beschriftung und statische MDI-Icons. Home Assistant wertet Templates mit den entity-/area-Variablen aus; der Kindle erhält nur Textwerte. Änderungen erscheinen ohne Seitenreload, die Auswertung wird zehn Sekunden zwischengespeichert. Dynamische Icons, Bilder und Badge-Aktionen werden noch nicht übersetzt. Klimamodi folgen der Auswahl in der Dashboard-Funktion. Aktualisieren bleibt manuell.
 
 Alle Karten verwenden dieselbe Raster-Zeilenhöhe. Explizite grid_options.rows bestimmen auch die vollständige Höhe der Klimakarte. Größere passende Zeilenstufen vergrößern Tasten und Karten gemeinsam. Cover beachten hide_state und bieten Auf/Stopp/Zu entsprechend den Fähigkeiten der jeweiligen Entität.
+
+Die Übersicht zeigt oben Badges und Beenden-Symbol ohne Dashboard-Titelzeile. Badges belegen beim Seitenumbruch keine zusätzliche Kartenfläche. Moderate Zeilenstufen bis 76 Pixel und kleinere Klima-/Cover-Bedientasten erhalten die HA-Rasterhöhen bei kompakterer Bedienung.
