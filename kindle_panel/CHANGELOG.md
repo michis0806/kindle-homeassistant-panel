@@ -1,3 +1,7 @@
+# 0.9.2
+
+Höhere Licht-/Skript-/Lüftertasten, größere Cover-Pfeile und größere Klimabedienung auf hohen Displays. Die großzügige Darstellung wird per CSS nur genutzt, wenn die gesamte Seite weiterhin passt. Kleinere Displays und umfangreichere Ansichten bleiben kompakt; die bestätigte stabile Breite wird nicht verändert.
+
 # 0.9.1
 
 Vier-Spalten-Grundraster mit Übernahme der Home-Assistant-Kartenbreiten, Zeilenbelegung, Reihenfolge und Abschnittsgrenzen. Große Klimakarte links, Jalousien rechts übereinander und weitere Karten wie im HA-Editor angeordnet; die aktuelle Raumkonfiguration passt auf eine Seite. JavaScript schreibt keine gemessenen Pixelbreiten mehr in die Seite; Kindle-Zoom wird über den Viewport festgesetzt.

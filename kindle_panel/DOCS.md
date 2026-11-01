@@ -20,3 +20,5 @@ Vollständige Installation und Einschränkungen: [GitHub](https://github.com/mic
 Lichter sind einzelne kompakte Tasten mit Name und Glühbirne (An: ausgefüllt; Aus: durchgestrichen). Ein Tipp setzt den jeweils anderen Zustand. Die Anzeige wartet auf die Bestätigung durch Home Assistant. Sensorwerte übernehmen die in Home Assistant eingestellten Nachkommastellen, auch bei Live-Updates.
 
 Cover-Karten bieten ↑ Öffnen und ↓ Schließen entsprechend den Gerätefähigkeiten. Skripte starten bei Berührung direkt ohne zusätzliche Parameter; bereits laufende Skripte sind gesperrt. Der Lüfter ist über eine Ein-/Aus-Taste bedienbar. Die Kindle-Seite nutzt die verfügbare Breite ohne fortlaufende JavaScript-Pixelbreitenkorrektur. Der Viewport bleibt für die Touchbedienung auf einer festen Skalierung.
+
+Auf hohen Displays werden Tasten, Cover-Pfeile und Klimabedienung größer dargestellt, wenn alle Elemente weiterhin auf die Seite passen. Kleine Displays und umfangreiche Ansichten bleiben kompakt. Die Breite bleibt unverändert.

@@ -80,7 +80,7 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
 
-.four-grid{width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0}.four-grid td{padding:0;vertical-align:top;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
+.four-grid{width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0}.four-grid .grid-row{height:52px}.four-grid td{padding:0;vertical-align:top;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
 .dashboard .masthead{padding:6px 8px}.dashboard .title-row h1{font-size:23px}.dashboard .exit-button{height:44px;width:46px;padding:6px}.dashboard .exit-button svg{height:28px;width:28px}
 .dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:40px}.dashboard .climate-panel .current{font-size:15px}
 .dashboard .climate-panel .temperature-table{table-layout:fixed;margin:4px 0}.dashboard .climate-panel .temperature-table .step{width:50px}.dashboard .climate-panel .temperature-table button{width:44px;height:48px;font-size:28px}
@@ -89,6 +89,15 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .dashboard .light-button{height:44px;padding:3px 8px}.dashboard .light-button-icon{width:26px;height:36px;line-height:36px;margin-right:6px}.dashboard .light-button svg{width:24px;height:24px}.dashboard .light-button-label{height:36px;font-size:15px;line-height:36px;white-space:nowrap;text-overflow:ellipsis}
 .dashboard .tile-inner{height:96px;padding:6px}.dashboard .tile-control{height:148px}.dashboard .tile-heading{height:28px}.dashboard .tile-label{height:28px;line-height:14px}.dashboard .tile-unit{font-size:12px;line-height:14px}.dashboard .tile-reading{margin-top:2px}.dashboard .tile-label{font-size:13px}.dashboard .tile-reading{font-size:24px;line-height:28px}.dashboard .tile-status{font-size:17px;line-height:20px}
 .dashboard .tile-heading-card{font-size:18px;line-height:24px;padding:2px 4px}.side-heading{font-size:15px;line-height:20px;padding:2px 4px}.dashboard .bottom{padding:4px 8px 8px}.dashboard .bottom-table{font-size:12px}
+
+@media(min-width:700px) and (min-height:900px){
+.dashboard.roomy .four-grid .grid-row{height:80px}
+.dashboard.roomy .light-button{height:72px;padding:10px 12px}.dashboard.roomy .light-button-icon{width:34px;height:48px;line-height:48px;margin-right:10px}.dashboard.roomy .light-button svg{width:30px;height:30px}.dashboard.roomy .light-button-label{height:48px;font-size:18px;line-height:48px}
+.dashboard.roomy .cover-inner{height:152px;padding:10px}.dashboard.roomy .cover-label{height:26px;font-size:18px;line-height:26px}.dashboard.roomy .cover-state{height:20px;font-size:15px;line-height:20px}.dashboard.roomy .cover-arrows{margin-top:8px}.dashboard.roomy .cover-arrows button{height:72px;font-size:34px;line-height:68px}
+.dashboard.roomy .climate-panel{height:312px;padding:14px}.dashboard.roomy .climate-panel h2{font-size:24px;line-height:28px}.dashboard.roomy .climate-panel .mode-status{font-size:17px}.dashboard.roomy .climate-panel .target{font-size:60px}.dashboard.roomy .climate-panel .current{font-size:18px}
+.dashboard.roomy .climate-panel .temperature-table{margin:12px 0}.dashboard.roomy .climate-panel .temperature-table .step{width:70px}.dashboard.roomy .climate-panel .temperature-table button{width:64px;height:64px;font-size:36px}.dashboard.roomy .mode-button{height:64px;padding:16px 0}.dashboard.roomy .mode-button svg{height:28px;width:28px}.dashboard.roomy .climate-more{font-size:14px;margin-top:9px}
+.dashboard.roomy .tile-inner{height:152px;padding:10px}.dashboard.roomy .tile-control{height:232px}.dashboard.roomy .tile-heading{height:42px}.dashboard.roomy .tile-label{height:42px;font-size:18px;line-height:21px}.dashboard.roomy .tile-reading{font-size:38px;line-height:44px}.dashboard.roomy .tile-unit{font-size:16px;line-height:20px}.dashboard.roomy .tile-status{font-size:22px;line-height:26px}.dashboard.roomy .tile-control .segment button{height:64px;font-size:20px}
+}
 
 '''
 
@@ -331,7 +340,7 @@ def render_grid(config,block,states,device,page_index):
             for c in range(p['column'],p['column']+p['span']):
                 if (r,c)!=(p['row'],p['column']):covered.add((r,c))
     for row in range(block['rows']):
-        body+='<tr style="height:'+str(GRID_UNIT)+'px">'
+        body+='<tr class="grid-row">'
         for column in range(4):
             p=positions.get((row,column))
             if p:
@@ -425,7 +434,11 @@ def dashboard(config,states,device,page_index,refresh):
     groups=dashboard_layout_pages(dashboard_cards(config));pages=len(groups);page_index=max(0,min(pages-1,page_index))
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
-    body='<div class="panel dashboard" id="dashboard-root" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
+    rows=sum(block.get('rows',0) for block in groups[page_index])
+    other_height=sum(block['height'] for block in groups[page_index] if block['kind']!='grid')
+    roomy=rows*80+other_height+90+(42 if len(config.get('dashboard_views',[]))>1 else 0)<=900
+    display_class='panel dashboard'+(' roomy' if roomy else '')
+    body='<div class="'+display_class+'" id="dashboard-root" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
     views=config.get('dashboard_views',[])
     if len(views)>1:
         body+='<nav class="view-tabs">'

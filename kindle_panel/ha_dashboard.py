@@ -174,7 +174,7 @@ def translate(raw, display=None):
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
     selected_display={entity:display[entity] for entity in all_entities if entity in display}
-    revision=hashlib.sha256(json.dumps([raw,selected_display,'four-column-stable-2'],sort_keys=True).encode()).hexdigest()
+    revision=hashlib.sha256(json.dumps([raw,selected_display,'four-column-stable-3'],sort_keys=True).encode()).hexdigest()
     return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display}
 
 

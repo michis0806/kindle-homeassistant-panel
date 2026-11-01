@@ -23,6 +23,8 @@ The Kindle uses a **four-column base grid** implemented with old-WebKit-compatib
 
 Lights use a filled bulb for on and a crossed-out bulb for off. Cover cards provide ↑ open and ↓ close buttons according to the entity capabilities; there are no position sliders. Touching a script button runs that script via `script.turn_on` without arguments. Already-running scripts are disabled. Fan cards provide basic on/off control. Icons and next actions follow confirmed HA state. Sensor values use HA display precision, including trailing zeroes. Explicit card names and entity names are preserved; the climate title retains its compact name handling.
 
+On displays at least 700×900 pixels, controls use taller rows, larger text and larger touch targets when the entire page still fits. Smaller displays and denser pages retain compact controls. This sizing uses CSS and does not measure or rewrite page widths.
+
 The Kindle viewport uses a fixed initial scale with user scaling disabled. The client does not write measured viewport pixel widths back into the page during polling or commands. The preview uses the same renderer. This is a compact monochrome translation rather than a pixel-identical copy of the HA editor.
 
 Custom cards, conditional visibility and arbitrary tap actions are not executed. The app shows translation warnings. Conditional cards/sections/views are omitted. Use a dedicated dashboard with ordinary supported cards for each room. A dashboard assignment limits this client's displayed and controllable entities; it is not a replacement for Home Assistant user permissions.
