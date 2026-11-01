@@ -80,6 +80,16 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
 
+.four-grid{width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0}.four-grid td{padding:0;vertical-align:top;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
+.dashboard .masthead{padding:6px 8px}.dashboard .title-row h1{font-size:23px}.dashboard .exit-button{height:44px;width:46px;padding:6px}.dashboard .exit-button svg{height:28px;width:28px}
+.dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:40px}.dashboard .climate-panel .current{font-size:15px}
+.dashboard .climate-panel .temperature-table{table-layout:fixed;margin:4px 0}.dashboard .climate-panel .temperature-table .step{width:50px}.dashboard .climate-panel .temperature-table button{width:44px;height:48px;font-size:28px}
+.dashboard .mode-button{height:40px;padding:6px 0}.dashboard .mode-button svg{height:24px;width:24px}.dashboard .climate-more{font-size:12px;margin-top:4px}
+.dashboard .cover-inner{height:96px;padding:6px}.dashboard .cover-label{height:20px;font-size:15px;line-height:20px;white-space:nowrap;text-overflow:ellipsis}.cover-state{display:block;height:14px;font-size:12px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#555}.dashboard .cover-arrows{margin-top:4px}.dashboard .cover-arrows td{padding:0 2px}.dashboard .cover-arrows button{height:40px;font-size:26px;line-height:36px}
+.dashboard .light-button{height:44px;padding:3px 8px}.dashboard .light-button-icon{width:26px;height:36px;line-height:36px;margin-right:6px}.dashboard .light-button svg{width:24px;height:24px}.dashboard .light-button-label{height:36px;font-size:15px;line-height:36px;white-space:nowrap;text-overflow:ellipsis}
+.dashboard .tile-inner{height:96px;padding:6px}.dashboard .tile-control{height:148px}.dashboard .tile-heading{height:28px}.dashboard .tile-label{height:28px;line-height:14px}.dashboard .tile-unit{font-size:12px;line-height:14px}.dashboard .tile-reading{margin-top:2px}.dashboard .tile-label{font-size:13px}.dashboard .tile-reading{font-size:24px;line-height:28px}.dashboard .tile-status{font-size:17px;line-height:20px}
+.dashboard .tile-heading-card{font-size:18px;line-height:24px;padding:2px 4px}.side-heading{font-size:15px;line-height:20px;padding:2px 4px}.dashboard .bottom{padding:4px 8px 8px}.dashboard .bottom-table{font-size:12px}
+
 '''
 
 def esc(value):
@@ -197,6 +207,7 @@ def updates(config,states):
             patch(entity,action,disabled=not writable,className='active' if active else '')
         if domain=='script':patch(entity,'run',disabled=not writable or state=='on')
         if domain=='cover':
+            patch(entity,'cover-status',text=plain(cover_status(item)))
             for action,disabled in cover_actions(item):patch(entity,action,disabled=not writable or disabled)
         if domain=='sensor':
             patch(entity,'value',text=plain(sensor_number(config,entity,state) if available else display_state(domain,state,attrs)))
@@ -228,7 +239,8 @@ def default_columns(entity):
 def dashboard_cards(config):
     if config.get('dashboard_view'):
         cards=[]
-        for group in config['dashboard_view']['groups']:
+        for index,group in enumerate(config['dashboard_view']['groups']):
+            if index:cards.append({'type':'section-break'})
             if group.get('title'):cards.append({'type':'heading','name':group['title']})
             cards.extend(group['cards'])
         return cards
@@ -238,34 +250,95 @@ def dashboard_cards(config):
 def card_columns(card):
     return 12 if card['type']=='heading' else card.get('columns',12)
 
-def dashboard_pages(selected):
+GRID_UNIT=52
+
+def compact_span(card):
+    if card['type']=='heading':return 4
+    return max(1,min(4,math.ceil(card_columns(card)/3)))
+
+def card_units(card):
+    domain=card.get('entity','').split('.')[0]
+    minimum=4 if domain=='climate' else 1 if domain in {'light','fan','script'} and not card.get('read_only') else 3 if domain in {'switch','input_boolean','scene'} and not card.get('read_only') else 2
+    rows=card.get('rows')
+    return max(minimum,min(12,rows)) if isinstance(rows,int) and not isinstance(rows,bool) else minimum
+
+def place_cards(cards):
+    occupied=[];placements=[]
+    for card in cards:
+        span=compact_span(card);units=card_units(card);row=0;found=False
+        while not found:
+            while len(occupied)<row+units:occupied.append([False]*4)
+            for column in range(5-span):
+                if all(not occupied[r][c] for r in range(row,row+units) for c in range(column,column+span)):
+                    for r in range(row,row+units):
+                        for c in range(column,column+span):occupied[r][c]=True
+                    placements.append({'card':card,'row':row,'column':column,'span':span,'units':units})
+                    found=True;break
+            if not found:row+=1
+    rows=max((p['row']+p['units'] for p in placements),default=0)
+    return placements,rows
+
+def layout_blocks(selected):
     cards=dashboard_cards({'entities':selected}) if not selected or isinstance(selected[0],str) else selected
-    pages=[];current=[];height=0;row_width=0;row_height=0
-    def card_height(card):
-        if card['type']=='heading':return 38
-        if card['type']=='badge':return 52
-        if card['type']=='climate':return 270 if card_columns(card)<12 else 258
-        if card.get('entity','').split('.')[0] in {'light','fan','script'} and not card.get('read_only'):return 80
-        if card.get('entity','').startswith('cover.') and not card.get('read_only'):return 108
-        return 144 if card.get('entity','').split('.')[0] in {'light','switch','input_boolean','scene'} else 124
-    for index,card in enumerate(cards):
-        if card['type']=='heading' and current and index+1<len(cards):
-            following=cards[index+1]
-            if height+(row_height if row_width else 0)+38+card_height(following)>620:
-                pages.append(current);current=[];height=0;row_width=0;row_height=0
-        if current and current[-1]['type']=='badge' and card['type']!='badge' and row_width:
-            height+=row_height;row_width=0;row_height=0
-        width=card_columns(card);cost=card_height(card)
-        if row_width and row_width+width>12:
-            height+=row_height;row_width=0;row_height=0
-        needed=height+max(row_height,cost)
-        if current and needed>620:
-            pages.append(current);current=[];height=0;row_width=0;row_height=0
-        current.append(card);row_width+=width;row_height=max(row_height,cost)
-        if row_width>=12:
-            height+=row_height;row_width=0;row_height=0
-    if current:pages.append(current)
+    blocks=[];pending=[]
+    def flush():
+        if pending:
+            placed,rows=place_cards(pending)
+            blocks.append({'kind':'grid','cards':list(pending),'placements':placed,'rows':rows,'height':rows*GRID_UNIT})
+            pending.clear()
+    badges=[c for c in cards if c['type']=='badge']
+    if badges:blocks.append({'kind':'badges','cards':badges,'height':52*math.ceil(len(badges)/4)})
+    for card in cards:
+        if card['type']=='badge':continue
+        if card['type'] in {'heading','section-break'}:
+            flush()
+            if card['type']=='heading':blocks.append({'kind':'heading','cards':[card],'height':28})
+        else:pending.append(card)
+    flush()
+    return blocks
+
+def dashboard_layout_pages(selected):
+    blocks=layout_blocks(selected);pages=[];page=[];height=0
+    for index,block in enumerate(blocks):
+        reserve=blocks[index+1]['height'] if block['kind']=='heading' and index+1<len(blocks) else 0
+        if page and height+block['height']+reserve>620:
+            pages.append(page);page=[];height=0
+        # Split large sections on complete visual row boundaries. Cards spanning
+        # several rows remain together so their controls are never cut apart.
+        if block['kind']=='grid' and block['height']>620:
+            boundaries=[row for row in range(1,block['rows']+1) if not any(p['row']<row<p['row']+p['units'] for p in block['placements'])]
+            start_row=0
+            while start_row<block['rows']:
+                candidates=[row for row in boundaries if start_row<row<=start_row+11]
+                end=max(candidates) if candidates else next(row for row in boundaries if row>start_row)
+                chosen=[dict(p,row=p['row']-start_row) for p in block['placements'] if start_row<=p['row']<end]
+                part=dict(block,placements=chosen,cards=[p['card'] for p in chosen],rows=end-start_row,height=(end-start_row)*GRID_UNIT)
+                if page and height+part['height']>620:pages.append(page);page=[];height=0
+                page.append(part);height+=part['height'];start_row=end
+                if start_row<block['rows']:pages.append(page);page=[];height=0
+        else:page.append(block);height+=block['height']
+    if page:pages.append(page)
     return pages or [[]]
+
+def dashboard_pages(selected):
+    return [[card for block in page for card in block['cards']] for page in dashboard_layout_pages(selected)]
+
+def render_grid(config,block,states,device,page_index):
+    body='<table class="four-grid"><colgroup>'+('<col style="width:25%">'*4)+'</colgroup><tbody>'
+    positions={(p['row'],p['column']):p for p in block['placements']};covered=set()
+    for p in block['placements']:
+        for r in range(p['row'],p['row']+p['units']):
+            for c in range(p['column'],p['column']+p['span']):
+                if (r,c)!=(p['row'],p['column']):covered.add((r,c))
+    for row in range(block['rows']):
+        body+='<tr style="height:'+str(GRID_UNIT)+'px">'
+        for column in range(4):
+            p=positions.get((row,column))
+            if p:
+                body+='<td colspan="'+str(p['span'])+'" rowspan="'+str(p['units'])+'">'+tile(config,p['card'],states,device,page_index,cell=True)+'</td>'
+            elif (row,column) not in covered:body+='<td></td>'
+        body+='</tr>'
+    return body+'</tbody></table>'
 
 def entity_icon(config,entity,item):
     attrs=item.get('attributes',{});domain=entity.split('.')[0];device_class=attrs.get('device_class')
@@ -303,8 +376,15 @@ def cover_actions(item):
     return [('open_cover',not features&1 or state=='opening' or position==100),
         ('close_cover',not features&2 or state in {'closing','closed'} or position==0)]
 
+def cover_status(item):
+    status=display_state('cover',item['state'],item.get('attributes',{}))
+    position=item.get('attributes',{}).get('current_position')
+    if item['state'] not in {'unknown','unavailable'} and isinstance(position,(int,float)) and not isinstance(position,bool) and math.isfinite(position) and 0<=position<=100:
+        status+=' · '+number(position)+' %'
+    return status
+
 def cover_tile(entity,item,device,page_index,config):
-    body='<div class="cover-inner"><span class="cover-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span><table class="cover-arrows"><tr>'
+    body='<div class="cover-inner"><span class="cover-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span><span class="cover-state" id="'+bid(entity,'cover-status')+'">'+cover_status(item)+'</span><table class="cover-arrows"><tr>'
     for action,disabled in cover_actions(item):
         body+='<td><form method="post" action="action">'+hidden(device,entity,action)+'<input type="hidden" name="seite" value="'+str(page_index)+'"><button id="'+bid(entity,action)+'" aria-label="'+('Öffnen' if action=='open_cover' else 'Schließen')+'"'+(' disabled' if disabled or item['state'] in {'unknown','unavailable'} else '')+'>'+('↑' if action=='open_cover' else '↓')+'</button></form></td>'
     return body+'</tr></table></div>'
@@ -314,9 +394,10 @@ def script_tile(config,entity,item,device,page_index):
         '<input type="hidden" name="seite" value="'+str(page_index)+'"><button class="light-button" id="'+bid(entity,'run')+'"'+(' disabled' if item['state'] in {'on','unknown','unavailable'} else '')+'>'+
         '<span class="light-button-icon">'+entity_icon(config,entity,item)+'</span><span class="light-button-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span></button></form>')
 
-def tile(config,card,states,device,page_index):
+def tile(config,card,states,device,page_index,cell=False):
     columns=card_columns(card);width=columns*100/12
     start=('<div class="tile badge-slot" style="width:auto">' if card['type']=='badge' else '<div class="tile" style="width:'+format(width,'.5f')+'%">')
+    if cell:start='<div class="tile tile-cell" style="width:100%">'
     if card['type']=='heading':return start+'<div class="tile-heading-card">'+esc(card.get('name',''))+'</div></div>'
     if card['type']=='unsupported':return start+'<div class="tile-inner"><h2 class="tile-label">'+esc(card['name'])+'</h2><p>Diese Karte wird noch nicht unterstützt.</p></div></div>'
     entity=card['entity'];item=states.get(entity,{'state':'unavailable','attributes':{}});attrs=item.get('attributes',{});state=item['state'];domain=entity.split('.')[0]
@@ -341,7 +422,7 @@ def tile(config,card,states,device,page_index):
     return body+'</div></div>'
 
 def dashboard(config,states,device,page_index,refresh):
-    groups=dashboard_pages(dashboard_cards(config));pages=len(groups);page_index=max(0,min(pages-1,page_index))
+    groups=dashboard_layout_pages(dashboard_cards(config));pages=len(groups);page_index=max(0,min(pages-1,page_index))
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
     body='<div class="panel dashboard" id="dashboard-root" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
@@ -352,13 +433,13 @@ def dashboard(config,states,device,page_index,refresh):
         body+='</nav>'
     if not any(groups):
         body+='<div class="empty-state">Dieses Dashboard ist noch leer.</div>'
-    body+='<div class="dashboard-grid">';in_badges=False
-    for card in groups[page_index]:
-        badge=card['type']=='badge'
-        if in_badges and not badge:body+='</div>';in_badges=False
-        if badge and not in_badges:body+='<div class="dashboard-badges">';in_badges=True
-        body+=tile(config,card,states,device,page_index)
-    if in_badges:body+='</div>'
+    body+='<div class="dashboard-grid">'
+    for block in groups[page_index]:
+        if block['kind']=='badges':
+            body+='<div class="dashboard-badges">'+''.join(tile(config,c,states,device,page_index) for c in block['cards'])+'</div>'
+        elif block['kind']=='heading':
+            body+='<div class="tile-heading-card">'+esc(block['cards'][0]['name'])+'</div>'
+        else:body+=render_grid(config,block,states,device,page_index)
     body+='</div>'
     body+='<footer class="bottom"><table class="bottom-table"><tr><td>'+live_footer()+'</td><td class="right">'
     if pages>1:

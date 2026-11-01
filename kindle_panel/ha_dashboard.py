@@ -47,7 +47,7 @@ def valid_entity(value):
 
 def default_columns(entity):
     domain=entity.split('.')[0]
-    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor','light'} else 6
+    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor'} else 6
 
 
 def seed(config):
@@ -123,7 +123,7 @@ def translate(raw, display=None):
                 except (TypeError,ValueError):columns=default_columns(entity)
                 if entity.startswith('climate.') and columns<6:
                     columns=6;warn('Klimapanels benötigen mindestens halbe Breite.')
-                if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.','script.','fan.')) and columns<6:
+                if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.','script.','fan.','cover.')) and columns<6:
                     columns=6;warn('Bedienbare Kacheln benötigen mindestens halbe Breite.')
                 action=card.get('tap_action',{}).get('action') if isinstance(card.get('tap_action',{}),dict) else None
                 read_only=action=='none'
@@ -136,7 +136,9 @@ def translate(raw, display=None):
                 if not isinstance(name,str):name=None
                 icon=card.get('icon');icon=icon if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon) else None
                 output.append({'type':'climate' if entity.startswith('climate.') else 'entity',
-                    'entity':entity,'name':name,'icon':icon,'columns':columns,'read_only':read_only})
+                    'entity':entity,'name':name,'icon':icon,'columns':columns,'read_only':read_only,
+                    'width_set':'columns' in card.get('grid_options',{}) or forced_columns is not None,
+                    'rows':card.get('grid_options',{}).get('rows')})
                 if entity not in all_entities:all_entities.append(entity)
                 if entity.split('.')[0] in CONTROLS and not read_only and entity not in controls:controls.append(entity)
             return output
@@ -172,7 +174,7 @@ def translate(raw, display=None):
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
     selected_display={entity:display[entity] for entity in all_entities if entity in display}
-    revision=hashlib.sha256(json.dumps([raw,selected_display,'covers-and-viewport-1'],sort_keys=True).encode()).hexdigest()
+    revision=hashlib.sha256(json.dumps([raw,selected_display,'four-column-stable-2'],sort_keys=True).encode()).hexdigest()
     return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display}
 
 

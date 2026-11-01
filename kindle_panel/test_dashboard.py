@@ -109,25 +109,49 @@ class DashboardTests(unittest.TestCase):
 
     def test_cover_script_and_fan_cards_are_translated_without_arbitrary_actions(self):
         model=translate({'views':[{'cards':[
-            {'type':'tile','entity':'cover.shade','features':[{'type':'cover-open-close'}]},
+            {'type':'tile','entity':'cover.shade','grid_options':{'columns':3},'features':[{'type':'cover-open-close'}]},
             {'type':'tile','entity':'script.ventilate'}, {'type':'tile','entity':'fan.room'},
             {'type':'button','entity':'script.private','tap_action':{'action':'perform-action','perform_action':'script.unrelated'}}]}]})
         config=view_config({},model)
         self.assertEqual(model['control_entities'],['cover.shade','script.ventilate','fan.room'])
-        self.assertEqual(config['columns']['cover.shade'],6)
+        self.assertEqual(config['columns']['cover.shade'],3)
         self.assertEqual(config['columns']['script.ventilate'],6)
         self.assertTrue(config['read_only']['script.private'])
         self.assertEqual(len(model['warnings']),1)
 
     def test_section_heading_stays_with_its_next_controls(self):
-        cards=[{'type':'climate','entity':'climate.a','columns':12},
-            {'type':'climate','entity':'climate.b','columns':12},
+        cards=[{'type':'climate','entity':'climate.c','columns':12,'width_set':True},
+            {'type':'climate','entity':'climate.a','columns':12,'width_set':True},
+            {'type':'climate','entity':'climate.b','columns':12,'width_set':True},
             {'type':'heading','name':'Next room'},
             {'type':'entity','entity':'script.room','columns':6,'read_only':False}]
         pages=ui.dashboard_pages(cards)
-        self.assertEqual(len(pages),2)
-        self.assertEqual(pages[1][0]['name'],'Next room')
-        self.assertEqual(pages[1][1]['entity'],'script.room')
+        self.assertGreaterEqual(len(pages),2)
+        location=next(i for i,page in enumerate(pages) if any(c.get('name')=='Next room' for c in page))
+        self.assertIn('script.room',[c.get('entity') for c in pages[location]])
+
+    def test_user_arranged_room_fits_one_page_and_preserves_cover_order(self):
+        raw={'views':[{'badges':['sensor.temp','sensor.humidity','binary_sensor.door','binary_sensor.window'],'type':'sections','sections':[
+            {'type':'grid','cards':[{'type':'thermostat','entity':'climate.room','grid_options':{'columns':6,'rows':4}},
+                {'type':'tile','entity':'cover.window'}, {'type':'tile','entity':'cover.door'},
+                *[{'type':'tile','entity':'light.'+name} for name in ('tv','sofa','ambient','ceiling')]]},
+            {'type':'grid','cards':[{'type':'heading','heading':'Alcove'},
+                {'type':'tile','entity':'fan.alcove'},{'type':'tile','entity':'script.alcove'},
+                {'type':'tile','entity':'cover.alcove'},{'type':'tile','entity':'cover.roof'}]}]}]}
+        config=view_config({},translate(raw));pages=ui.dashboard_layout_pages(ui.dashboard_cards(config))
+        self.assertEqual(len(pages),1)
+        grid=next(block for block in pages[0] if block['kind']=='grid')
+        placed={p['card']['entity']:p for p in grid['placements']}
+        self.assertEqual((placed['climate.room']['column'],placed['climate.room']['span'],placed['climate.room']['units']),(0,2,4))
+        self.assertEqual((placed['cover.window']['row'],placed['cover.window']['column']),(0,2))
+        self.assertEqual((placed['cover.door']['row'],placed['cover.door']['column']),(2,2))
+        self.assertEqual((placed['light.tv']['row'],placed['light.sofa']['row']),(4,4))
+        rendered=[c['entity'] for block in pages[0] for c in block['cards'] if 'entity' in c]
+        self.assertEqual(set(rendered),set(config['entities']));self.assertEqual(len(rendered),len(set(rendered)))
+        markup=ui.dashboard(config,{}, {'csrf':'test'},0,30)
+        self.assertIn('colspan="2" rowspan="4"',markup)
+        self.assertNotIn('class="pager"',markup)
+        self.assertEqual(ui.label(config,'fan.alcove',{'attributes':{'friendly_name':'Alcove Fan'}}),'Alcove Fan')
 
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]

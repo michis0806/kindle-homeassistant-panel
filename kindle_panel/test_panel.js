@@ -39,9 +39,10 @@ const context={document,window:{innerHeight:800,addEventListener(name,fn){window
         this.open=function(method,url){this.method=method;this.url=url;};this.setRequestHeader=function(){};
         this.send=function(body){this.body=body;};this.abort=function(){};}};
 vm.runInNewContext(fs.readFileSync(__dirname+'/panel.js','utf8'),context);
-assert.equal(root.style.width,'600px');assert.equal(root.style.minHeight,'800px');
-const initialRequests=requests.length;document.documentElement.clientWidth=758;context.window.innerHeight=1024;windowHandlers.resize();
-assert.equal(root.style.width,'758px');assert.equal(root.style.minHeight,'1024px');assert.equal(reloads,0);assert.equal(requests.length,initialRequests,'Resize must not reload or fetch the page');
+assert.equal(root.style.width,undefined,'The client must not write measured viewport widths back into layout');
+assert.equal(root.style.minHeight,undefined);
+const initialRequests=requests.length;document.documentElement.clientWidth=758;context.window.innerHeight=1024;
+assert.equal(root.style.width,undefined);assert.equal(reloads,0);assert.equal(requests.length,initialRequests);
 function respond(method,code,data){
     const r=requests.find(r=>r.method===method&&!r.replied);assert(r,'Expected '+method);
     r.replied=true;r.status=code;r.readyState=4;r.responseText=JSON.stringify(data);r.onreadystatechange();return r;
@@ -85,4 +86,5 @@ const scriptPost=respond('POST',202,{accepted:true});assert(scriptPost.body.incl
 assert(!scriptButton.disabled,'Script activation does not wait for a short-lived on state');
 const coverButton=add('button','e-cover-test-open_cover');const coverForm=form(coverButton,'open_cover');coverForm.elements.find(c=>c.name==='entity').value='cover.test';document.forms.push(coverForm);
 submit(coverForm,coverButton);respond('POST',202,{accepted:true});assert(coverButton.disabled);next(0);const moving=lightSnapshot('off');moving.entities['cover.test']={state:'opening'};moving.patches.push({id:coverButton.id,disabled:false});respond('GET',200,moving);assert(!coverButton.disabled,'Cover command is confirmed when movement starts');
-console.log('Panel tests passed: viewport resize without reload, script activation, cover movement confirmation, no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');
+assert.equal(root.style.width,undefined,'Commands and state updates must never set pixel widths');
+console.log('Panel tests passed: no viewport feedback writes, script activation, cover movement confirmation, no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');

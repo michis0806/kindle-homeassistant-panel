@@ -296,8 +296,9 @@ CSS = ui.CSS
 
 def page(title, body, refresh=0, kindle=False):
     meta = '<meta http-equiv="refresh" content="%d">' % refresh if refresh else ''
+    viewport='width=device-width,initial-scale=1'+(',minimum-scale=1,maximum-scale=1,user-scalable=no' if kindle else '')
     return ('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">' + meta +
+        '<meta name="viewport" content="'+viewport+'">' + meta +
         '<title>' + esc(title) + '</title><style>' + CSS + '</style></head><body' + (' class="kindle"' if kindle else '') + '>' + body + '</body></html>')
 
 class Handler(BaseHTTPRequestHandler):

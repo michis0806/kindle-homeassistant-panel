@@ -7,7 +7,7 @@
 
 Beim ersten Start wird das eigene Dashboard **Kindle** (`kindle-panel`) bei Bedarf aus der bisherigen Auswahl angelegt. Vorhandene Dashboards bleiben unverändert. Weitere Dashboards können in Home Assistant angelegt und getrennt zugeordnet werden. Mehrere Geräte dürfen dasselbe Dashboard verwenden.
 
-Sensoren, binäre Zustände und Lichttasten sind standardmäßig ein Viertel breit, andere Bedienkacheln halb breit und Klimapanels ganz breit. Unterstützt werden einfache Core-Karten und Sections. Benutzerdefinierte Karten, bedingte Sichtbarkeit und spezielle Tipp-Aktionen werden nicht ausgeführt; Hinweise stehen in der App.
+Die Kindle-Ansicht nutzt ein Vier-Spalten-Grundraster und übernimmt die Kartenbreiten, Zeilenbelegung, Reihenfolge und Abschnittsgrenzen aus Home Assistant. Eine Klimakarte mit sechs HA-Spalten und vier Zeilen steht über die halbe Breite; zwei halbbreite Cover mit je zwei Zeilen können rechts daneben stehen. Weitere Karten folgen deiner Anordnung. Größere Abschnitte werden bei Bedarf an vollständigen Zeilengrenzen auf Seiten verteilt. Unterstützt werden einfache Core-Karten und Sections. Benutzerdefinierte Karten, bedingte Sichtbarkeit und spezielle Tipp-Aktionen werden nicht ausgeführt; Hinweise stehen in der App.
 
 Entity-Badges (z. B. Temperatur, Luftfeuchtigkeit und Bewegung) erscheinen als schmale Badges mit Home-Assistant-Icon, Wert und Einheit oberhalb der Panels und werden live aktualisiert. Bedingte oder benutzerdefinierte Badges sowie Attributanzeigen werden mit Hinweis ausgelassen. Eine bereits als Karte vorhandene Entität wird nicht zusätzlich als Badge angezeigt.
 
@@ -19,4 +19,4 @@ Vollständige Installation und Einschränkungen: [GitHub](https://github.com/mic
 
 Lichter sind einzelne kompakte Tasten mit Name und Glühbirne (An: ausgefüllt; Aus: durchgestrichen). Ein Tipp setzt den jeweils anderen Zustand. Die Anzeige wartet auf die Bestätigung durch Home Assistant. Sensorwerte übernehmen die in Home Assistant eingestellten Nachkommastellen, auch bei Live-Updates.
 
-Cover-Karten bieten ↑ Öffnen und ↓ Schließen entsprechend den Gerätefähigkeiten. Skripte starten bei Berührung direkt ohne zusätzliche Parameter; bereits laufende Skripte sind gesperrt. Der Lüfter ist über eine Ein-/Aus-Taste bedienbar. Die Kindle-Seite nutzt die gesamte verfügbare Breite und passt sich bei Größenänderungen ohne Reload erneut an.
+Cover-Karten bieten ↑ Öffnen und ↓ Schließen entsprechend den Gerätefähigkeiten. Skripte starten bei Berührung direkt ohne zusätzliche Parameter; bereits laufende Skripte sind gesperrt. Der Lüfter ist über eine Ein-/Aus-Taste bedienbar. Die Kindle-Seite nutzt die verfügbare Breite ohne fortlaufende JavaScript-Pixelbreitenkorrektur. Der Viewport bleibt für die Touchbedienung auf einer festen Skalierung.

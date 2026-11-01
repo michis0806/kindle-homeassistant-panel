@@ -1,6 +1,6 @@
 {
   "name": "Kindle Panel",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "slug": "kindle_panel",
   "description": "Home-Assistant-Dashboards für mehrere Kindle-Panels mit Live-Werten",
   "arch": [

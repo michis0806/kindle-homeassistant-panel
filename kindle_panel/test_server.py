@@ -235,9 +235,10 @@ class PanelTests(unittest.TestCase):
         body=self.request(self.public,headers=headers)[2]
         self.assertIn('id="e-climate-test-plus"',body)
         self.assertIn('id="e-light-test-toggle"',body)
-        self.assertEqual(body.count('style="width:25.00000%"'),5)
-        self.assertIn('style="width:100.00000%"',body)
-        self.assertNotIn('colspan=',body)
+        self.assertIn('<colgroup>'+('<col style="width:25%">'*4)+'</colgroup>',body)
+        self.assertIn('class="tile tile-cell" style="width:100%"',body)
+        self.assertIn('class="four-grid"',body)
+        self.assertIn('user-scalable=no',body)
 
     def install_room_source(self):
         models={path:ha_dashboard.translate({'views':[{'title':path,'path':'home','cards':[{'type':'tile','entity':entity}]}]})
@@ -360,6 +361,7 @@ class PanelTests(unittest.TestCase):
         self.assertTrue(patches['e-cover-shade-open_cover']['disabled'])
         self.assertFalse(patches['e-cover-shade-close_cover']['disabled'])
         self.assertTrue(patches['e-script-ventilate-run']['disabled'])
+        self.assertEqual(patches['e-cover-shade-cover-status']['text'],'Offen · 100 %')
 
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32

@@ -3,30 +3,6 @@
     var stopped = false, online = false, polling = false, pollTimer = null;
     var pending = null, pendingTimer = null, clicked = null;
     var status = document.getElementById('panel-status');
-    var viewportTimers = [], viewportWidth = 0, viewportHeight = 0;
-    function fitViewport() {
-        var root = document.getElementById('dashboard-root') || document.body;
-        var doc = document.documentElement;
-        if (!root || !root.style || !doc) { return; }
-        var width = doc.clientWidth || window.innerWidth;
-        var height = window.innerHeight || doc.clientHeight;
-        if (width > 0 && width !== viewportWidth) { root.style.width = width + 'px'; viewportWidth = width; }
-        if (height > 0 && height !== viewportHeight) { root.style.minHeight = height + 'px'; viewportHeight = height; }
-    }
-    if (document.documentElement) {
-        fitViewport();
-        // Mesquite can resize the content window after its native bars disappear.
-        // Reflow the existing document instead of reloading the page.
-        if (window.addEventListener) {
-            window.addEventListener('resize', fitViewport, false);
-            window.addEventListener('orientationchange', fitViewport, false);
-            window.addEventListener('pageshow', fitViewport, false);
-        }
-        viewportTimers.push(setTimeout(fitViewport, 150));
-        viewportTimers.push(setTimeout(fitViewport, 600));
-        viewportTimers.push(setTimeout(fitViewport, 1500));
-    }
-
     function text(node, value) {
         value = String(value);
         if (!node) { return; }
@@ -95,7 +71,6 @@
         return (action === 'turn_on' && item.state === 'on') || (action === 'turn_off' && item.state === 'off');
     }
     function render(data) {
-        fitViewport();
         var i, root=document.getElementById('dashboard-root');
         if (!pending && root && data.revision && root.getAttribute('data-revision')!==data.revision) {
             window.location.reload(); return;
@@ -195,6 +170,6 @@
             }
         });
     }, false);
-    window.onunload = function () { var i; for (i=0; i<viewportTimers.length; i+=1) { clearTimeout(viewportTimers[i]); } stopped = true; clearTimeout(pollTimer); clearTimeout(pendingTimer); };
+    window.onunload = function () { stopped = true; clearTimeout(pollTimer); clearTimeout(pendingTimer); };
     lockButtons(); poll();
 }());

@@ -1,3 +1,7 @@
+# 0.9.1
+
+Vier-Spalten-Grundraster mit Übernahme der Home-Assistant-Kartenbreiten, Zeilenbelegung, Reihenfolge und Abschnittsgrenzen. Große Klimakarte links, Jalousien rechts übereinander und weitere Karten wie im HA-Editor angeordnet; die aktuelle Raumkonfiguration passt auf eine Seite. JavaScript schreibt keine gemessenen Pixelbreiten mehr in die Seite; Kindle-Zoom wird über den Viewport festgesetzt.
+
 # 0.8.0
 
 Cover-Karten mit Auf-/Zu-Pfeilen, direkt auslösbare Skript-Tasten und einfache Lüfter-Ein-/Aus-Bedienung. Aktionen bleiben auf das zugewiesene Dashboard und unterstützte Gerätefunktionen begrenzt. Vollbreite Kindle-Seite ohne Desktop-Breitenlimit und erneute Größenanpassung nach Fensteränderungen ohne Seitenreload.
