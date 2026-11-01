@@ -574,7 +574,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:index=0
         if query.get('profile',[''])[0]=='device':
             with self.app.lock:reported=self.app.viewport_reports.get(key,{})
-            if reported.get('unit') in {52,60,68,76}:config['preferred_layout_unit']=reported['unit']
+            if reported.get('unit') in {52,60,68,72,76}:config['preferred_layout_unit']=reported['unit']
         config['template_values']=self.app.template_renderer.values(config)
         body=ui.dashboard(config,states,{'csrf':'preview-only'},index,self.app.refresh)
         body=re.sub(r'<script\b[^>]*>.*?</script>','',body,flags=re.S)

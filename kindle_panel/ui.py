@@ -92,6 +92,30 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .dashboard .tile-heading-card{font-size:18px;line-height:24px;padding:2px 4px}.side-heading{font-size:15px;line-height:20px;padding:2px 4px}.dashboard .bottom{padding:4px 8px 8px}.dashboard .bottom-table{font-size:12px}
 
 
+/* Quiet monochrome surfaces; preserve the dashboard's grid and touch sizes. */
+#dashboard-root{position:relative;padding:12px}
+#dashboard-root .layout-badge-measure{left:12px;right:12px;top:12px}
+#dashboard-root .badge-pill{background:#ededed;border-color:#d5d5d5;padding-left:8px;padding-right:8px;font-size:17px}
+#dashboard-root .badge-value{font-weight:600}
+#dashboard-root .exit-button{background:#ededed;border-color:#ededed;border-radius:10px}
+#dashboard-root .tile-inner,#dashboard-root .cover-inner,#dashboard-root .climate-panel,#dashboard-root .light-button{background:#f3f3f3;border-color:#d2d2d2;border-radius:12px}
+#dashboard-root .light-button-label,#dashboard-root .cover-label,#dashboard-root .climate-panel h2{font-weight:600}
+#dashboard-root .light-button-icon{background:#dedede;border-radius:9px}
+#dashboard-root .light-button.is-on{background:#ededed;border-color:#bdbdbd}
+#dashboard-root .light-button.is-on .light-button-icon{background:#222;color:#fff}
+#dashboard-root .light-button.is-unavailable .light-button-icon{background:#e6e6e6;color:#888}
+#dashboard-root .cover-arrows button,#dashboard-root .temperature-table button{background:#dedede;border:1px solid #d5d5d5;border-radius:8px}
+#dashboard-root .cover-arrows button:disabled,#dashboard-root .temperature-table button:disabled{background:#eaeaea;border-color:#e3e3e3;color:#aaa}
+#dashboard-root .mode-buttons{background:#dedede;border-radius:8px;overflow:hidden}
+#dashboard-root .mode-button{background:#dedede;border-color:#dedede}
+#dashboard-root .mode-button.active{background:#222;border-color:#222;color:#fff}
+#dashboard-root .mode-button:disabled{background:#e9e9e9;border-color:#e9e9e9;color:#aaa}
+#dashboard-root .mode-buttons td:first-child .mode-button{border-radius:8px 0 0 8px}
+#dashboard-root .mode-buttons td:last-child .mode-button{border-radius:0 8px 8px 0}
+#dashboard-root .climate-info{color:#555}
+#dashboard-root .tile-heading-card{font-weight:600;color:#333}
+
+
 '''
 
 def esc(value):
@@ -350,7 +374,7 @@ def dashboard_pages(selected):
 def layout_css(blocks):
     maximum=max((block.get('rows',0) for block in blocks),default=1)
     rules=[]
-    for unit in (52,60,68,76):
+    for unit in (52,60,68,72,76):
         prefix='#dashboard-root.layout-u'+str(unit)
         def rule(selector,values):
             rules.append(prefix+' '+selector+'{'+(';'.join(key+':'+str(value) for key,value in values.items()))+'}')
@@ -362,7 +386,7 @@ def layout_css(blocks):
                 for selector in ('.climate-panel','.cover-inner','.light-button','.tile-inner'):
                     rule('.grid-n-'+str(row)+' '+selector,{'height':px(row*unit-8)})
         if unit==52:continue
-        big=unit>=76;middle=unit==68
+        big=unit>=76;middle=unit in (68,72)
         font=18 if big else 17 if middle else 16
         button=unit-8;label=button-22
         rule('.light-button',{'padding':'10px 12px'})
@@ -554,7 +578,7 @@ def dashboard(config,states,device,page_index,refresh):
     fit_headings=max(sum(1 for block in group if block['kind']=='heading') for group in groups)
     badges=[card for group in groups for block in group if block['kind']=='badges' for card in block['cards']]
     display_class='panel dashboard layout-u52'
-    body='<div class="'+display_class+'" id="dashboard-root" data-grid-rows="'+str(rows)+'" data-fit-rows="'+str(fit_rows)+'" data-fit-headings="'+str(fit_headings)+'" data-layout-preferred="'+str(config.get('preferred_layout_unit',0))+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'
+    body='<div class="'+display_class+'" id="dashboard-root" data-layout-inset="24" data-grid-rows="'+str(rows)+'" data-fit-rows="'+str(fit_rows)+'" data-fit-headings="'+str(fit_headings)+'" data-layout-preferred="'+str(config.get('preferred_layout_unit',0))+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'
     if badges:
         measurement=''.join(tile(config,card,states,device,page_index) for card in badges)
         body+='<div class="layout-badge-measure" aria-hidden="true">'+re.sub(r' id="[^"]*"','',measurement)+'</div>'

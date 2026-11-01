@@ -34,3 +34,5 @@ Alle Karten verwenden dieselbe Raster-Zeilenhöhe. Explizite grid_options.rows b
 Die Übersicht zeigt oben Badges und Beenden-Symbol ohne Dashboard-Titelzeile. Badges belegen beim Seitenumbruch keine zusätzliche Kartenfläche. Moderate Zeilenstufen bis 76 Pixel und kleinere Klima-/Cover-Bedientasten erhalten die HA-Rasterhöhen bei kompakterer Bedienung.
 
 Mit Kindle-Starter 1.2 löst „Aktualisieren“ nach dem Laden der Seite einen vollständigen nativen Display-Refresh auf genau diesem Kindle aus. Es gibt keinen regelmäßigen Vollrefresh-Timer. Für ältere Starter bleibt es beim Seitenreload. Die USB-Erweiterung muss unabhängig vom Add-on aktualisiert werden.
+
+Die Übersicht verwendet zwölf Pixel Außenabstand, helle graue Karten- und Tastenflächen sowie schwarze Akzente für bestätigte aktive Zustände. Der Außenabstand wird bei der einmaligen Höhenberechnung berücksichtigt.

@@ -8,19 +8,19 @@
         var rows=Number(root.getAttribute('data-fit-rows')||root.getAttribute('data-grid-rows'))||0;
         var visible=window.innerHeight || document.documentElement.clientHeight;
         var width=window.innerWidth || document.documentElement.clientWidth;
-        var fixed=4, nodes=root.querySelectorAll(root.getAttribute('data-fit-rows')?'.masthead,.view-tabs,.bottom':'.masthead,.dashboard-badges,.tile-heading-card,.view-tabs,.bottom'), i, unit=52;
+        var fixed=4+(Number(root.getAttribute('data-layout-inset'))||0), nodes=root.querySelectorAll(root.getAttribute('data-fit-rows')?'.masthead,.view-tabs,.bottom':'.masthead,.dashboard-badges,.tile-heading-card,.view-tabs,.bottom'), i, unit=52;
         for (i=0;i<nodes.length;i+=1) { fixed+=height(nodes[i]); }
         if (root.getAttribute('data-fit-headings')!==null) {
             fixed+=(Number(root.getAttribute('data-fit-headings'))||0)*28;
             var badges=root.querySelector('.layout-badge-measure');
             fixed+=badges?Math.max(52,height(badges)):52;
         }
-        var choices=[76,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
+        var choices=[76,72,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
         root.setAttribute('data-layout-fixed',String(fixed));
         for (i=0;i<choices.length;i+=1) {
             if (rows*choices[i]+fixed+4<=visible) { unit=choices[i];break; }
         }
-        if ((preferred===52 || preferred===60 || preferred===68 || preferred===76) && rows*preferred+fixed+4<=visible) { unit=preferred; }
+        if ((preferred===52 || preferred===60 || preferred===68 || preferred===72 || preferred===76) && rows*preferred+fixed+4<=visible) { unit=preferred; }
         root.className='panel dashboard layout-u'+unit+(width>=700?' layout-wide':'');
         root.setAttribute('data-layout-unit',String(unit));
         root.setAttribute('data-layout-ready','1');

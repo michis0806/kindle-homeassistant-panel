@@ -1,3 +1,7 @@
+# 0.11.1
+
+Ruhige Grauflächen für Karten, Badges und Bedienfelder; aktive Licht-Icons und Klimamodi mit schwarzer Fläche und weißem Symbol. Kräftigere Beschriftung und einheitlichere Rundungen. Zwölf Pixel Außenabstand in der Übersicht werden bei der Höhenwahl berücksichtigt. Eine zusätzliche 72-Pixel-Rasterstufe nutzt den verbleibenden Platz maßvoll.
+
 # 0.11.0
 
 „Aktualisieren“ fordert nach dem Seitenaufbau einen manuellen nativen Vollrefresh an. Eigene Zähler je Kindle und abgesicherte Anforderung über Kopplung/CSRF. Benötigt Kindle-Starter 1.2; kein periodischer Vollrefresh. Automatische Tests, Test-Workflow und native Testmenüs entfernt. Licht-Wiederherstellung bleibt als eigene Funktion erhalten.
