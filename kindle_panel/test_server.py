@@ -381,6 +381,25 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(self.request(self.public,path='/entity?entity=light.private',headers=headers)[0],404)
         self.assertEqual(self.calls,[])
 
+    def test_actions_keep_selected_dashboard_view_and_template_badge_updates(self):
+        token,device=self.pair();headers={'Cookie':COOKIE+'='+token}
+        model=ha_dashboard.translate({'views':[{'path':'first','cards':[]},{'path':'other','badges':[
+            {'type':'custom:mushroom-template-badge','content':'{{ now() }}','icon':'mdi:clock'}],
+            'cards':[{'type':'tile','entity':'light.test'}]}]})
+        class Source:
+            def model(self,path):return model
+        self.app.dashboard_source=Source()
+        original=self.app.api_override;clock=['16:10']
+        self.app.api_override=lambda path,payload:clock[0] if path=='template' else original(path,payload)
+        body=self.request(self.public,path='/?view=other',headers=headers)[2]
+        self.assertIn('name="view" value="other"',body)
+        self.assertIn('16:10',body)
+        status,_,data=self.request(self.public,path='/updates.json?view=other',headers=headers)
+        self.assertEqual(status,200);self.assertIn('16:10',[p.get('text') for p in json.loads(data)['patches']])
+        self.app.control(token,device['csrf'],'light.test','turn_on',view_path='other')
+        self.assertEqual(self.calls[-1],('services/light/turn_on',{'entity_id':'light.test'}))
+        with self.assertRaises(ValueError):self.app.control(token,device['csrf'],'light.test','turn_on')
+
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32
         self.app.bind_controller(a,ca);self.app.bind_controller(b,cb)

@@ -7,10 +7,12 @@ import re
 import time
 from urllib.parse import urlsplit
 from dashboard_actions import normalize_actions
+import template_badges
 
 PATH = 'kindle-panel'
 DOMAINS = {'sensor','binary_sensor','climate','light','switch','input_boolean','scene','weather','cover','script','fan'}
 CONTROLS = {'climate','light','switch','input_boolean','scene','cover','script','fan'}
+HVAC_MODES = ('off','fan_only','dry','cool','heat','heat_cool','auto')
 
 
 def commands(requests):
@@ -163,10 +165,19 @@ def translate(raw, display=None, dashboard_path=PATH):
                 name=card.get('name')
                 if not isinstance(name,str):name=None
                 icon=card.get('icon');icon=icon.replace('hass:','mdi:',1) if isinstance(icon,str) and icon.startswith('hass:') else icon;icon=icon if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon) else None
+                climate_features=[feature for feature in card.get('features',[]) if isinstance(feature,dict) and feature.get('type')=='climate-hvac-modes']
+                # Missing hvac_modes means HA's full entity-supported set. An
+                # explicit empty list is a real restriction and must survive.
+                climate_modes=None
+                if entity.startswith('climate.') and climate_features and 'hvac_modes' in climate_features[0]:
+                    requested=climate_features[0].get('hvac_modes')
+                    requested=requested if isinstance(requested,list) else []
+                    climate_modes=[mode for mode in HVAC_MODES if mode in requested]
                 output.append({'type':'climate' if entity.startswith('climate.') else 'entity',
                     'entity':entity,'name':name,'icon':icon,'columns':columns,'read_only':read_only,
                     'width_set':'columns' in card.get('grid_options',{}) or forced_columns is not None,
                     'rows':card.get('grid_options',{}).get('rows'),'source_kind':kind,'actions':source_actions,'blocked_actions':blocked_actions,
+                    'climate_modes':climate_modes,
                     'presentation':{key:copy.deepcopy(card[key]) for key in ('show_name','show_icon','hide_state','vertical','features_position','features') if key in card}})
                 if entity not in all_entities:all_entities.append(entity)
                 if entity.split('.')[0] in CONTROLS and not read_only and entity not in controls:controls.append(entity)
@@ -191,6 +202,10 @@ def translate(raw, display=None, dashboard_path=PATH):
             if not isinstance(badge,dict):continue
             if badge.get('visibility') or badge.get('conditions') or badge.get('state_filter'):
                 warn('Bedingte Badges werden zur Sicherheit nicht angezeigt.');continue
+            if badge.get('type')=='custom:mushroom-template-badge':
+                parsed=template_badges.normalize(badge,path,len(badges),warn)
+                if parsed:badges.append(parsed)
+                continue
             if badge.get('type','entity')!='entity' or not valid_entity(badge.get('entity')):
                 warn('Nicht unterstütztes Badge: '+str(badge.get('type','entity')));continue
             if badge.get('state_content','state') not in ('state',['state']):
@@ -221,6 +236,8 @@ def view_config(base, model, path=None):
         display_precision={entity:entry['precision'] for entity,entry in model.get('display',{}).items() if 'precision' in entry},
         columns={c['entity']:c['columns'] for c in cards if 'entity' in c},
         read_only={c['entity']:c['read_only'] for c in cards if 'entity' in c},
+        climate_modes={c['entity']:c['climate_modes'] for c in cards if 'entity' in c and c.get('climate_modes') is not None},
+        control_entities=[c['entity'] for c in cards if 'entity' in c and c['entity'].split('.')[0] in CONTROLS and not c.get('read_only')],
         dashboard_view=view,dashboard_views=[{'path':v['path'],'title':v['title']} for v in model['views']],
         dashboard_revision=model['revision'])
     return result

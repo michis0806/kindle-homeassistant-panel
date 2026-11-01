@@ -59,39 +59,6 @@
           "exitmenu": true,
           "refresh": false,
           "status": false
-        },
-        {
-          "name": "E-Ink-Vollrefresh (ab nächstem Start)",
-          "items": [
-            {
-              "name": "Jede Minute",
-              "action": "printf '%s\\n' 60 > ./display-refresh-seconds.txt",
-              "exitmenu": false,
-              "refresh": false,
-              "status": false
-            },
-            {
-              "name": "Alle 5 Minuten",
-              "action": "printf '%s\\n' 300 > ./display-refresh-seconds.txt",
-              "exitmenu": false,
-              "refresh": false,
-              "status": false
-            },
-            {
-              "name": "Alle 15 Minuten",
-              "action": "printf '%s\\n' 900 > ./display-refresh-seconds.txt",
-              "exitmenu": false,
-              "refresh": false,
-              "status": false
-            },
-            {
-              "name": "Aus",
-              "action": "printf '%s\\n' 0 > ./display-refresh-seconds.txt",
-              "exitmenu": false,
-              "refresh": false,
-              "status": false
-            }
-          ]
         }
       ]
     }

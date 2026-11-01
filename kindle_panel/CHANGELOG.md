@@ -1,3 +1,7 @@
+# 0.10.2
+
+Mushroom-Template-Badges mit Inhalt, Beschriftung und statischem MDI-Icon. Home Assistant wertet die Dashboard-Templates serverseitig aus; Texte werden ohne Seitenreload aktualisiert. Klimatasten berücksichtigen die im Dashboard eingeschränkten Betriebsarten, einschließlich explizit leerer Auswahl. Bedienaktionen behalten die gewählte Dashboard-Ansicht. Automatischen E-Ink-Refresh entfernt; Aktualisieren bleibt manuell.
+
 # 0.10.1
 
 Mehrseitige Ansichten reservieren Platz für die Navigation, teilen große Kartengruppen erst nach der Platzberechnung auf und behalten dieselbe Größenstufe auf allen Seiten. Tabellenfreie Seitennavigation und beidseitig begrenzte Karten vermeiden seitlichen Überstand. Kompakteres Klimapanel ohne zusätzliche Betriebsart-Anzeige, mit Info-Schaltfläche oben rechts.

@@ -4,6 +4,7 @@ import copy
 from decimal import Decimal, InvalidOperation
 import ui
 import ha_dashboard
+import template_badges
 import hashlib
 import hmac
 import html
@@ -17,7 +18,7 @@ import re
 import secrets
 import threading
 import time
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
@@ -50,6 +51,7 @@ class App:
         self.dashboard_source = None
         self.dashboard_stop = threading.Event()
         self.api_override = api
+        self.template_renderer=template_badges.Renderer(self.api)
         self.data = json.loads(self.path.read_text()) if self.path.exists() else {
             'admin_csrf': secrets.token_hex(24), 'entities': [], 'devices': {}}
         options = self.directory / 'options.json'
@@ -100,7 +102,9 @@ class App:
         base=self.access_config(token)
         if self.dashboard_source is None or not base.get('dashboard_enabled',True):return base
         model=self.dashboard_source.model(base['dashboard_path'])
-        return ha_dashboard.view_config(base,model,view_path or base.get('default_view'))
+        config=ha_dashboard.view_config(base,model,view_path or base.get('default_view'))
+        config['template_values']=self.template_renderer.values(config)
+        return config
 
     def assign_dashboard(self,key,path,name,view_path=None):
         if self.dashboard_source is None:raise ValueError('Dashboard connection unavailable')
@@ -134,7 +138,7 @@ class App:
             data=None if payload is None else json.dumps(payload).encode(),
             headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
         with urlopen(request, timeout=8) as response:
-            return json.load(response)
+            return response.read(4096).decode('utf-8',errors='replace') if path=='template' else json.load(response)
 
     def states(self):
         return {item['entity_id']: item for item in self.api('states')}
@@ -258,11 +262,13 @@ class App:
             self.data['labels'] = {key: value.strip() for key, value in previous.items() if key in selected and value.strip()}
             self.save()
 
-    def control(self, token, csrf, entity, action, value=''):
+    def control(self, token, csrf, entity, action, value='', view_path=None):
         device = self.device(token)
         if not device or not device['approved'] or not hmac.compare_digest(device['csrf'], csrf):
             raise PermissionError()
-        config=self.access_config(token)
+        # Resolve the device's assigned dashboard view so both entity access
+        # and per-card feature restrictions apply to direct POST requests.
+        config=self.render_config(token,view_path) if view_path else self.render_config(token)
         if entity not in config['entities'] or ('control_entities' in config and entity not in config['control_entities']):
             raise ValueError('Entity is not selected')
         domain = entity.split('.')[0]
@@ -289,7 +295,7 @@ class App:
                     raise ValueError('Invalid temperature')
                 service = 'set_temperature'
                 payload['temperature'] = float(requested)
-            elif action == 'climate_hvac' and value in attrs.get('hvac_modes', []):
+            elif action == 'climate_hvac' and value in ui.climate_modes(config,entity,attrs):
                 service = 'set_hvac_mode'
                 payload['hvac_mode'] = value
             elif action == 'climate_fan' and features & 8 and value in attrs.get('fan_modes', []):
@@ -480,14 +486,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, page('Kindle verlassen', '<h1>Kindle wird beendet …</h1><p>Die Kindle-Startseite sollte gleich erscheinen.</p><p><a href="./">Zur Übersicht</a></p>', kindle=True))
                 if path not in {'/action', '/action.json'}:
                     raise PermissionError()
-                self.app.control(self.token(), field('csrf'), field('entity'), field('action'), field('value'))
+                self.app.control(self.token(), field('csrf'), field('entity'), field('action'), field('value'), field('view') or None)
                 if json_action:
                     return self.send(202, json.dumps({'accepted':True}), content_type='application/json')
                 if field('entity').startswith('climate.'):
-                    return self.redirect('./?klima=' + field('entity'))
+                    return self.redirect('./?'+urlencode(dict({'klima':field('entity')},**({'view':field('view')} if field('view') else {}))))
                 page_index = field('seite')
                 if page_index.isdigit() and 0 <= int(page_index) < 8:
-                    return self.redirect('./?seite=' + page_index)
+                    return self.redirect('./?'+urlencode(dict({'seite':page_index},**({'view':field('view')} if field('view') else {}))))
             self.redirect()
         except PermissionError:
             if json_action: return self.send(403, json.dumps({'error':'not_authorized'}), content_type='application/json')
@@ -533,6 +539,7 @@ class Handler(BaseHTTPRequestHandler):
         if query.get('profile',[''])[0]=='device':
             with self.app.lock:reported=self.app.viewport_reports.get(key,{})
             if reported.get('unit') in {52,60,68,80}:config['preferred_layout_unit']=reported['unit']
+        config['template_values']=self.app.template_renderer.values(config)
         body=ui.dashboard(config,states,{'csrf':'preview-only'},index,self.app.refresh)
         body=re.sub(r'<script\b[^>]*>.*?</script>','',body,flags=re.S)
         body=body.replace('Live-Verbindung wird gestartet …','Vorschau')

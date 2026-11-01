@@ -6,6 +6,7 @@ from urllib.parse import urlencode, urlsplit, unquote
 from icons import ICONS
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 import time
+import template_badges
 
 MODES = {'off':'Aus', 'heat':'Heizen', 'cool':'Kühlen', 'heat_cool':'Heizen / Kühlen', 'fan_only':'Nur Lüften', 'dry':'Entfeuchten', 'auto':'Automatisch'}
 KINDS = {'light':'Licht', 'switch':'Schalter', 'input_boolean':'Schalter', 'scene':'Szene', 'climate':'Raumklima', 'sensor':'Messwert', 'binary_sensor':'Status', 'weather':'Wetter','cover':'Abdeckung','script':'Skript','fan':'Lüfter'}
@@ -70,7 +71,7 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .tile-control .tile-status{height:27px;margin:4px 0 5px}.tile-control .segment button{padding:8px 0;font-size:17px}
 .tile-active{border-color:#111}.tile-unavailable{color:#777}.tile .climate-panel{border-radius:10px}
 .badge-pill{display:inline-block;max-width:100%;height:44px;border:1px solid #aaa;border-radius:24px;padding:8px 11px;white-space:nowrap;overflow:hidden;vertical-align:top;font:18px/26px Arial,sans-serif}
-.badge-icon{display:inline-block;width:24px;height:26px;vertical-align:top;margin-right:7px}.badge-icon svg{width:24px;height:24px;vertical-align:middle}.badge-unit{margin-left:4px}.badge-value{vertical-align:top}
+.badge-icon{display:inline-block;width:24px;height:26px;vertical-align:top;margin-right:7px}.badge-icon svg{width:24px;height:24px;vertical-align:middle}.badge-caption{margin-left:6px;font-size:13px;color:#555}.badge-caption:empty{display:none}.badge-unit{margin-left:4px}.badge-value{vertical-align:top}
 .cover-inner{height:100px;padding:10px;border:1px solid #aaa;border-radius:10px;overflow:hidden}.cover-label{display:block;font:16px/22px Arial,sans-serif;height:22px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.cover-arrows{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:8px}.cover-arrows td{padding:0 3px}.cover-arrows form{margin:0}.cover-arrows button{width:100%;height:48px;padding:0;font:30px/44px Arial,sans-serif;border-radius:6px}.cover-arrows button:disabled{color:#aaa;border-color:#ccc}
 .entity-link{color:inherit;text-decoration:none}.action-link{display:block;text-decoration:none}.light-form{margin:0}.light-button{display:block;width:100%;height:72px;padding:12px 10px;border:1px solid #aaa;border-radius:10px;text-align:left;background:#fff;color:#111;overflow:hidden}
 .light-button.is-on{border-color:#111}.light-button:disabled{color:#999;border-color:#aaa}.light-button-icon{float:left;width:30px;height:40px;margin-right:8px;line-height:40px;text-align:center}
@@ -131,6 +132,7 @@ def label(config, entity, item):
 
 def hidden(device,entity,action=None):
     fields='<input type="hidden" name="csrf" value="'+esc(device['csrf'])+'"><input type="hidden" name="entity" value="'+esc(entity)+'">'
+    if device.get('view'):fields+='<input type="hidden" name="view" value="'+esc(device['view'])+'">'
     if action: fields+='<input type="hidden" name="action" value="'+esc(action)+'">'
     return fields
 
@@ -184,11 +186,21 @@ def settings(item):
         ('Lüfter','climate_fan',attrs.get('fan_modes',[]) if features&8 else [],attrs.get('fan_mode'),
         {'auto':'Automatisch','quiet':'Leise','low':'Niedrig','medium':'Mittel','high':'Hoch'})]
 
+def climate_modes(config,entity,attrs):
+    supported=attrs.get('hvac_modes',[])
+    if not isinstance(supported,list):supported=[]
+    allowed=config.get('climate_modes',{}).get(entity)
+    return [mode for mode in MODE_ORDER if mode in supported and (allowed is None or mode in allowed)]
+
 def setting_name(value,names):
     return names.get(value,'Stufe '+str(value) if str(value).isdigit() else str(value))
 
 def updates(config,states):
     patches=[]; confirmations={}
+    for card in template_badges.cards(config):
+        values=config.get('template_values',{}).get(card['template_id'],{})
+        for field in ('content','label'):
+            patches.append({'id':'t-'+card['template_id']+'-'+field,'text':values.get(field,'—' if field=='content' else '')})
     def patch(entity,field,**values):
         patches.append(dict(id=bid(entity,field),**values))
     for entity in config['entities']:
@@ -214,8 +226,9 @@ def updates(config,states):
             patch(entity,'value',text=plain(sensor_number(config,entity,state) if available else display_state(domain,state,attrs)))
             patch(entity,'unit',text=str(attrs.get('unit_of_measurement','')) if available else '')
         if domain=='climate':
+            allowed_modes=climate_modes(config,entity,attrs)
             for mode in MODE_ORDER:
-                patch(entity,'mode-'+mode,disabled=not writable or mode not in attrs.get('hvac_modes',[]),className='mode-button'+(' active' if state==mode else ''))
+                patch(entity,'mode-'+mode,disabled=not writable or mode not in allowed_modes,className='mode-button'+(' active' if state==mode else ''))
             unit=attrs.get('temperature_unit','')
             patch(entity,'current',text=plain(number(attrs.get('current_temperature'))))
             patch(entity,'unit',text=unit)
@@ -473,6 +486,7 @@ def action_href(config,entity):
 
 
 def entity_detail(config,entity,item,device):
+    device=dict(device,view=config.get('dashboard_view',{}).get('path'))
     config=dict(config,entities=[entity],actions={})
     card={'type':'entity','entity':entity,'columns':12,'read_only':entity not in config.get('control_entities',[])}
     body='<div class="panel">'+masthead(label(config,entity,item),device=device)+'<div class="climate-main"><a class="back" href="/">‹ Übersicht</a>'
@@ -485,6 +499,14 @@ def tile(config,card,states,device,page_index,cell=False):
     if cell:start='<div class="tile tile-cell" style="width:100%">'
     if card['type']=='heading':return start+'<div class="tile-heading-card">'+esc(card.get('name',''))+'</div></div>'
     if card['type']=='unsupported':return start+'<div class="tile-inner"><h2 class="tile-label">'+esc(card['name'])+'</h2><p>Diese Karte wird noch nicht unterstützt.</p></div></div>'
+    if card.get('template_id'):
+        values=config.get('template_values',{}).get(card['template_id'],{})
+        content=values.get('content','—');caption=values.get('label','')
+        body='<div class="badge-pill">'
+        if card.get('icon'):body+='<span class="badge-icon">'+entity_icon({'icons':{'sensor.badge':card['icon']}},'sensor.badge',{'attributes':{}})+'</span>'
+        body+='<span class="badge-value" id="t-'+card['template_id']+'-content">'+esc(content)+'</span>'
+        body+='<span class="badge-caption" id="t-'+card['template_id']+'-label">'+esc(caption)+'</span>'
+        return start+body+'</div></div>'
     entity=card['entity'];item=states.get(entity,{'state':'unavailable','attributes':{}});attrs=item.get('attributes',{});state=item['state'];domain=entity.split('.')[0]
     if card['type']=='badge':return start+badge_tile(config,card,entity,item)+'</div>'
     href=action_href(config,entity)
@@ -513,6 +535,7 @@ def tile(config,card,states,device,page_index,cell=False):
     return body+'</div></div>'
 
 def dashboard(config,states,device,page_index,refresh):
+    device=dict(device,view=config.get('dashboard_view',{}).get('path'))
     groups=dashboard_layout_pages(dashboard_cards(config));pages=len(groups);page_index=max(0,min(pages-1,page_index))
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
@@ -561,7 +584,7 @@ def climate_panel(config,entity,item,device,more=False):
         body+='</tr></table>'
     else:
         body+='<p class="current" id="'+bid(entity,'current-line')+'">Aktuell '+number(attrs.get('current_temperature'))+' '+esc(unit)+'</p>'
-    modes=[mode for mode in MODE_ORDER if mode in attrs.get('hvac_modes',[])]
+    modes=climate_modes(config,entity,attrs)
     if modes:
         body+='<table class="mode-buttons"><tr>'
         for mode in modes:
@@ -570,6 +593,7 @@ def climate_panel(config,entity,item,device,more=False):
     return body+'</div>'
 
 def climate(config,entity,item,device):
+    device=dict(device,view=config.get('dashboard_view',{}).get('path'))
     attrs=item.get('attributes',{});available=item['state'] not in {'unknown','unavailable'} and not config.get('read_only',{}).get(entity,False)
     body='<div class="panel"><div class="climate-main climate-detail"><div style="float:right">'+exit_form(device)+'</div><a class="back" href="./">‹ Übersicht</a><div style="clear:both"></div>'+climate_panel(config,entity,item,device)
     for title,action,values,current,names in settings(item):
