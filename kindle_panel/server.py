@@ -304,7 +304,7 @@ class App:
             else:
                 raise ValueError('Climate action not supported')
         elif domain == 'cover':
-            capability={'open_cover':1,'close_cover':2}.get(action)
+            capability={'open_cover':1,'close_cover':2,'stop_cover':8}.get(action)
             if not capability or not int(item.get('attributes',{}).get('supported_features',0)) & capability:
                 raise ValueError('Cover action not supported')
             service=action
@@ -538,7 +538,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:index=0
         if query.get('profile',[''])[0]=='device':
             with self.app.lock:reported=self.app.viewport_reports.get(key,{})
-            if reported.get('unit') in {52,60,68,80}:config['preferred_layout_unit']=reported['unit']
+            if reported.get('unit') in {52,60,68,76,80,88,96,112}:config['preferred_layout_unit']=reported['unit']
         config['template_values']=self.app.template_renderer.values(config)
         body=ui.dashboard(config,states,{'csrf':'preview-only'},index,self.app.refresh)
         body=re.sub(r'<script\b[^>]*>.*?</script>','',body,flags=re.S)

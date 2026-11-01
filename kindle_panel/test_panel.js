@@ -86,5 +86,9 @@ const scriptPost=respond('POST',202,{accepted:true});assert(scriptPost.body.incl
 assert(!scriptButton.disabled,'Script activation does not wait for a short-lived on state');
 const coverButton=add('button','e-cover-test-open_cover');const coverForm=form(coverButton,'open_cover');coverForm.elements.find(c=>c.name==='entity').value='cover.test';document.forms.push(coverForm);
 submit(coverForm,coverButton);respond('POST',202,{accepted:true});assert(coverButton.disabled);next(0);const moving=lightSnapshot('off');moving.entities['cover.test']={state:'opening'};moving.patches.push({id:coverButton.id,disabled:false});respond('GET',200,moving);assert(!coverButton.disabled,'Cover command is confirmed when movement starts');
+const stopButton=add('button','e-cover-test-stop_cover');const stopForm=form(stopButton,'stop_cover');stopForm.elements.find(c=>c.name==='entity').value='cover.test';document.forms.push(stopForm);
+submit(stopForm,stopButton);assert(respond('POST',202,{accepted:true}).body.includes('action=stop_cover'));
+next(0);const stopping=lightSnapshot('off');stopping.entities['cover.test']={state:'opening'};stopping.patches.push({id:stopButton.id,disabled:false});respond('GET',200,stopping);assert(stopButton.disabled,'Wait until HA confirms cover is no longer moving');
+next(2000);stopping.entities['cover.test'].state='open';respond('GET',200,stopping);assert(!stopButton.disabled,'Stop completes when HA reports a stationary cover');
 assert.equal(root.style.width,undefined,'Commands and state updates must never set pixel widths');
 console.log('Panel tests passed: no viewport feedback writes, script activation, cover movement confirmation, no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');

@@ -64,6 +64,7 @@
         var item = pending && data.entities[pending.entity], action = pending && pending.action;
         if (!item || !pending.ack) { return false; }
         if (action === 'open_cover') { return item.state === 'opening' || item.state === 'open'; }
+        if (action === 'stop_cover') { return item.state === 'open' || item.state === 'closed'; }
         if (action === 'close_cover') { return item.state === 'closing' || item.state === 'closed'; }
         if (action === 'climate_temperature') { return item.temperature !== null && typeof item.temperature !== 'undefined' && Number(item.temperature) === Number(pending.value.replace(',', '.')); }
         if (action === 'climate_hvac') { return item.state === pending.value; }

@@ -1,3 +1,7 @@
+# 0.10.3
+
+Kartenhöhen folgen einem gemeinsamen Raster mit größeren, zur Fensterhöhe passenden Zeilenstufen. Explizite Klima-Zeilenhöhen werden vollständig übernommen. Badges werden separat gemessen statt als vergrößerte Rasterzeilen reserviert. Cover berücksichtigen hide_state und zeigen Auf/Stopp/Zu entsprechend den Gerätefähigkeiten; Stopp wird anhand des bestätigten Zustands abgeschlossen.
+
 # 0.10.2
 
 Mushroom-Template-Badges mit Inhalt, Beschriftung und statischem MDI-Icon. Home Assistant wertet die Dashboard-Templates serverseitig aus; Texte werden ohne Seitenreload aktualisiert. Klimatasten berücksichtigen die im Dashboard eingeschränkten Betriebsarten, einschließlich explizit leerer Auswahl. Bedienaktionen behalten die gewählte Dashboard-Ansicht. Automatischen E-Ink-Refresh entfernt; Aktualisieren bleibt manuell.

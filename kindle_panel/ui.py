@@ -81,7 +81,7 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
 
-.pagination{height:48px;white-space:nowrap;text-align:center;margin-top:4px;overflow:hidden}.pagination .pager{font-size:15px;padding:8px 12px;margin:0;vertical-align:middle}.pagination .pager[aria-disabled]{color:#aaa;border-color:#ccc}.page-count{display:inline-block;min-width:64px;text-align:center;font-size:14px;vertical-align:middle}.live-line{font-size:12px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.climate-heading{position:relative;padding-right:30px}.climate-info{position:absolute;right:0;top:0;width:28px;height:28px;text-align:center;font:24px/28px Arial,sans-serif;text-decoration:none}.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
+.layout-badge-measure{position:absolute;left:0;right:0;top:0;padding:0 2px;visibility:hidden;pointer-events:none;font-size:0;line-height:0}.cover-inner.hide-state .cover-arrows button{height:54px;line-height:50px}.pagination{height:48px;white-space:nowrap;text-align:center;margin-top:4px;overflow:hidden}.pagination .pager{font-size:15px;padding:8px 12px;margin:0;vertical-align:middle}.pagination .pager[aria-disabled]{color:#aaa;border-color:#ccc}.page-count{display:inline-block;min-width:64px;text-align:center;font-size:14px;vertical-align:middle}.live-line{font-size:12px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.climate-heading{position:relative;padding-right:30px}.climate-info{position:absolute;right:0;top:0;width:28px;height:28px;text-align:center;font:24px/28px Arial,sans-serif;text-decoration:none}.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
 .dashboard .masthead{padding:6px 8px}.dashboard .title-row h1{font-size:23px}.dashboard .exit-button{height:44px;width:46px;padding:6px}.dashboard .exit-button svg{height:28px;width:28px}
 .dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:36px}.dashboard .climate-panel .current{font-size:15px}
 .dashboard .climate-panel .temperature-table{table-layout:fixed;margin:4px 0}.dashboard .climate-panel .temperature-table .step{width:50px}.dashboard .climate-panel .temperature-table button{width:44px;height:48px;font-size:28px}
@@ -347,7 +347,7 @@ def dashboard_pages(selected):
 def layout_css(blocks):
     maximum=max((block.get('rows',0) for block in blocks),default=1)
     rules=[]
-    for unit in (52,60,68,80):
+    for unit in (52,60,68,76,80,88,96,112):
         prefix='#dashboard-root.layout-u'+str(unit)
         def rule(selector,values):
             rules.append(prefix+' '+selector+'{'+(';'.join(key+':'+str(value) for key,value in values.items()))+'}')
@@ -357,9 +357,9 @@ def layout_css(blocks):
             rule('.grid-h-'+str(row),{'height':px(row*unit)})
             if row:
                 for selector in ('.climate-panel','.cover-inner','.light-button','.tile-inner'):
-                    rule('.grid-n-'+str(row)+' '+selector,{'height':px((min(row,3) if selector=='.climate-panel' else row)*unit-8)})
+                    rule('.grid-n-'+str(row)+' '+selector,{'height':px(row*unit-8)})
         if unit==52:continue
-        big=unit==80;middle=unit==68
+        big=unit>=76;middle=unit==68
         font=18 if big else 17 if middle else 16
         button=unit-8;label=button-22
         rule('.light-button',{'padding':'10px 12px'})
@@ -369,15 +369,16 @@ def layout_css(blocks):
         cover_label=26 if big else 24 if middle else 22
         cover_state=20 if big else 18 if middle else 16
         cover_margin=8 if big else 6 if middle else 4
-        cover_button=72 if big else 56 if middle else 46
+        cover_button=2*unit-88 if big else 56 if middle else 46
         rule('.cover-inner',{'padding':'10px'})
         rule('.cover-label',{'height':px(cover_label),'font-size':px(font),'line-height':px(cover_label)})
         rule('.cover-state',{'height':px(cover_state),'font-size':px(15 if big else 14 if middle else 13),'line-height':px(cover_state)})
         rule('.cover-arrows',{'margin-top':px(cover_margin)})
         rule('.cover-arrows button',{'height':px(cover_button),'font-size':'32px','line-height':px(cover_button-4)})
+        rule('.cover-inner.hide-state .cover-arrows button',{'height':px(cover_button+cover_state),'line-height':px(cover_button+cover_state-4)})
         target=48 if big else 46 if middle else 42
         step=60 if big else 56 if middle else 50
-        mode=64 if big else 52 if middle else 46
+        mode=unit-16 if unit>80 else 64 if big else 52 if middle else 46
         rule('.climate-panel',{'padding':'10px'})
         rule('.climate-panel h2',{'font-size':px(24 if big else 22 if middle else 20),'line-height':px(28 if big else 26 if middle else 24)})
         rule('.climate-panel .mode-status',{'font-size':px(17 if big else 16 if middle else 15),'margin':('4px 0 0' if big else '2px 0 0')})
@@ -398,7 +399,7 @@ def layout_css(blocks):
         rule('.tile-status',{'font-size':'18px','line-height':'22px'})
         rule('.tile-control .tile-status',{'height':'32px'})
         rule('.tile-control .segment button',{'height':px(button),'font-size':'18px','padding':'6px 0'})
-    rules.append('#dashboard-root.layout-u80.layout-wide .climate-panel .target{font-size:60px}')
+    for unit in (80,88,96,112):rules.append('#dashboard-root.layout-u'+str(unit)+'.layout-wide .climate-panel .target{font-size:60px}')
     return '<style>'+''.join(rules)+'</style>'
 
 def render_grid(config,block,states,device,page_index):
@@ -443,6 +444,7 @@ def light_button(config,entity,item,device,page_index):
 def cover_actions(item):
     attrs=item.get('attributes',{});features=int(attrs.get('supported_features',0));position=attrs.get('current_position');state=item['state']
     return [('open_cover',not features&1 or state=='opening' or position==100),
+        ('stop_cover',not features&8),
         ('close_cover',not features&2 or state in {'closing','closed'} or position==0)]
 
 def entity_caption(config,entity,item):
@@ -458,9 +460,13 @@ def cover_status(item):
     return status
 
 def cover_tile(entity,item,device,page_index,config):
-    body='<div class="cover-inner"><span class="cover-label">'+entity_caption(config,entity,item)+'</span><span class="cover-state" id="'+bid(entity,'cover-status')+'">'+cover_status(item)+'</span><table class="cover-arrows"><tr>'
+    hide_state=config.get('presentation',{}).get(entity,{}).get('hide_state',False)
+    body='<div class="cover-inner'+(' hide-state' if hide_state else '')+'"><span class="cover-label">'+entity_caption(config,entity,item)+'</span>'
+    if not hide_state:body+='<span class="cover-state" id="'+bid(entity,'cover-status')+'">'+cover_status(item)+'</span>'
+    body+='<table class="cover-arrows"><tr>'
     for action,disabled in cover_actions(item):
-        body+='<td><form method="post" action="action">'+hidden(device,entity,action)+'<input type="hidden" name="seite" value="'+str(page_index)+'"><button id="'+bid(entity,action)+'" aria-label="'+('Öffnen' if action=='open_cover' else 'Schließen')+'"'+(' disabled' if disabled or item['state'] in {'unknown','unavailable'} else '')+'>'+('↑' if action=='open_cover' else '↓')+'</button></form></td>'
+        label,icon={'open_cover':('Öffnen','↑'),'stop_cover':('Stopp','■'),'close_cover':('Schließen','↓')}[action]
+        body+='<td><form method="post" action="action">'+hidden(device,entity,action)+'<input type="hidden" name="seite" value="'+str(page_index)+'"><button id="'+bid(entity,action)+'" aria-label="'+label+'"'+(' disabled' if disabled or item['state'] in {'unknown','unavailable'} else '')+'>'+icon+'</button></form></td>'
     return body+'</tr></table></div>'
 
 def script_tile(config,entity,item,device,page_index):
@@ -540,9 +546,15 @@ def dashboard(config,states,device,page_index,refresh):
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
     rows=sum(block.get('rows',0) for block in groups[page_index])
-    fit_rows=max(sum(block.get('rows',0) if block['kind']=='grid' else math.ceil(block['height']/GRID_UNIT) for block in group) for group in groups)
+    fit_rows=max(sum(block.get('rows',0) for block in group) for group in groups)
+    fit_headings=max(sum(1 for block in group if block['kind']=='heading') for group in groups)
+    badges=[card for group in groups for block in group if block['kind']=='badges' for card in block['cards']]
     display_class='panel dashboard layout-u52'
-    body='<div class="'+display_class+'" id="dashboard-root" data-grid-rows="'+str(rows)+'" data-fit-rows="'+str(fit_rows)+'" data-layout-preferred="'+str(config.get('preferred_layout_unit',0))+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
+    body='<div class="'+display_class+'" id="dashboard-root" data-grid-rows="'+str(rows)+'" data-fit-rows="'+str(fit_rows)+'" data-fit-headings="'+str(fit_headings)+'" data-layout-preferred="'+str(config.get('preferred_layout_unit',0))+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'
+    if badges:
+        measurement=''.join(tile(config,card,states,device,page_index) for card in badges)
+        body+='<div class="layout-badge-measure" aria-hidden="true">'+re.sub(r' id="[^"]*"','',measurement)+'</div>'
+    body+=masthead(title,query(page_index),device=device)
     views=config.get('dashboard_views',[])
     if len(views)>1:
         body+='<nav class="view-tabs">'

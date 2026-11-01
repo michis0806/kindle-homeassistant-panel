@@ -10,12 +10,17 @@
         var width=window.innerWidth || document.documentElement.clientWidth;
         var fixed=4, nodes=root.querySelectorAll(root.getAttribute('data-fit-rows')?'.masthead,.view-tabs,.bottom':'.masthead,.dashboard-badges,.tile-heading-card,.view-tabs,.bottom'), i, unit=52;
         for (i=0;i<nodes.length;i+=1) { fixed+=height(nodes[i]); }
-        var choices=[80,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
+        if (root.getAttribute('data-fit-headings')!==null) {
+            fixed+=(Number(root.getAttribute('data-fit-headings'))||0)*28;
+            var badges=root.querySelector('.layout-badge-measure');
+            if (badges) { fixed+=height(badges); }
+        }
+        var choices=[112,96,88,80,76,68,60,52],preferred=Number(root.getAttribute('data-layout-preferred'));
         root.setAttribute('data-layout-fixed',String(fixed));
         for (i=0;i<choices.length;i+=1) {
             if (rows*choices[i]+fixed+4<=visible) { unit=choices[i];break; }
         }
-        if ((preferred===52 || preferred===60 || preferred===68 || preferred===80) && rows*preferred+fixed+4<=visible) { unit=preferred; }
+        if ((preferred===52 || preferred===60 || preferred===68 || preferred===76 || preferred===80 || preferred===88 || preferred===96 || preferred===112) && rows*preferred+fixed+4<=visible) { unit=preferred; }
         root.className='panel dashboard layout-u'+unit+(width>=700?' layout-wide':'');
         root.setAttribute('data-layout-unit',String(unit));
         root.setAttribute('data-layout-ready','1');

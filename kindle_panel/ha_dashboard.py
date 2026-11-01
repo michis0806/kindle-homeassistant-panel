@@ -234,6 +234,7 @@ def view_config(base, model, path=None):
         actions={c['entity']:c.get('actions',{}) for c in cards if 'entity' in c},
         action_entities=list(model['entities']),
         display_precision={entity:entry['precision'] for entity,entry in model.get('display',{}).items() if 'precision' in entry},
+        presentation={c['entity']:c.get('presentation',{}) for c in cards if 'entity' in c},
         columns={c['entity']:c['columns'] for c in cards if 'entity' in c},
         read_only={c['entity']:c['read_only'] for c in cards if 'entity' in c},
         climate_modes={c['entity']:c['climate_modes'] for c in cards if 'entity' in c and c.get('climate_modes') is not None},
