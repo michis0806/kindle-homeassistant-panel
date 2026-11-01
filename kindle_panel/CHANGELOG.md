@@ -1,3 +1,7 @@
+# 0.11.0
+
+„Aktualisieren“ fordert nach dem Seitenaufbau einen manuellen nativen Vollrefresh an. Eigene Zähler je Kindle und abgesicherte Anforderung über Kopplung/CSRF. Benötigt Kindle-Starter 1.2; kein periodischer Vollrefresh. Automatische Tests, Test-Workflow und native Testmenüs entfernt. Licht-Wiederherstellung bleibt als eigene Funktion erhalten.
+
 # 0.10.4
 
 Titelzeile der Übersicht entfällt; Badges und Beenden-Symbol teilen den Kopfbereich. Badges werden beim Seitenumbruch nicht mehr zusätzlich als Kartenfläche gezählt. Moderatere gemeinsame Rasterstufen bis 76 Pixel sowie kleinere Klima- und Cover-Bedientasten. Die aktuelle Raumansicht passt auf eine Seite; explizite HA-Zeilenhöhen bleiben erhalten.

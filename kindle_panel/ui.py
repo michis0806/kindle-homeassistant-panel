@@ -81,7 +81,7 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
 
-.dashboard-top{position:relative;min-height:52px;padding:0 52px 0 2px;font-size:0;line-height:0}.dashboard-top .top-exit{position:absolute;right:4px;top:4px}.dashboard-top .exit-button{width:44px;height:44px;padding:7px}.dashboard-top .exit-button svg{width:28px;height:28px}.layout-badge-measure{position:absolute;left:0;right:0;top:0;padding:0 52px 0 2px;visibility:hidden;pointer-events:none;font-size:0;line-height:0}.cover-inner.hide-state .cover-arrows button{height:54px;line-height:50px}.pagination{height:48px;white-space:nowrap;text-align:center;margin-top:4px;overflow:hidden}.pagination .pager{font-size:15px;padding:8px 12px;margin:0;vertical-align:middle}.pagination .pager[aria-disabled]{color:#aaa;border-color:#ccc}.page-count{display:inline-block;min-width:64px;text-align:center;font-size:14px;vertical-align:middle}.live-line{font-size:12px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.climate-heading{position:relative;padding-right:30px}.climate-info{position:absolute;right:0;top:0;width:28px;height:28px;text-align:center;font:24px/28px Arial,sans-serif;text-decoration:none}.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
+.dashboard-top{position:relative;min-height:52px;padding:0 52px 0 2px;font-size:0;line-height:0}.dashboard-top .top-exit{position:absolute;right:4px;top:4px}.dashboard-top .exit-button{width:44px;height:44px;padding:7px}.dashboard-top .exit-button svg{width:28px;height:28px}.layout-badge-measure{position:absolute;left:0;right:0;top:0;padding:0 52px 0 2px;visibility:hidden;pointer-events:none;font-size:0;line-height:0}.cover-inner.hide-state .cover-arrows button{height:54px;line-height:50px}.pagination{height:48px;white-space:nowrap;text-align:center;margin-top:4px;overflow:hidden}.pagination .pager{font-size:15px;padding:8px 12px;margin:0;vertical-align:middle}.pagination .pager[aria-disabled]{color:#aaa;border-color:#ccc}.page-count{display:inline-block;min-width:64px;text-align:center;font-size:14px;vertical-align:middle}.display-refresh-form{display:inline;margin:0}.refresh-link{font:inherit;padding:0;border:0;background:none;text-decoration:underline;cursor:pointer}.live-line{font-size:12px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.climate-heading{position:relative;padding-right:30px}.climate-info{position:absolute;right:0;top:0;width:28px;height:28px;text-align:center;font:24px/28px Arial,sans-serif;text-decoration:none}.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
 .dashboard .masthead{padding:6px 8px}.dashboard .title-row h1{font-size:23px}.dashboard .exit-button{height:44px;width:46px;padding:6px}.dashboard .exit-button svg{height:28px;width:28px}
 .dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:36px}.dashboard .climate-panel .current{font-size:15px}
 .dashboard .climate-panel .temperature-table{table-layout:fixed;margin:4px 0}.dashboard .climate-panel .temperature-table .step{width:50px}.dashboard .climate-panel .temperature-table button{width:44px;height:48px;font-size:28px}
@@ -243,8 +243,11 @@ def updates(config,states):
         confirmations[entity]={'state':state,'temperature':attrs.get('temperature'),'fan_mode':attrs.get('fan_mode')}
     return {'patches':patches,'entities':confirmations}
 
-def live_footer():
-    return '<span id="panel-status" role="status">Live-Verbindung wird gestartet …</span> · <a href="">Aktualisieren</a><noscript>JavaScript ist aus. Bitte manuell aktualisieren.</noscript>'
+def live_footer(device=None):
+    status='<span id="panel-status" role="status">Live-Verbindung wird gestartet …</span> · '
+    if device:
+        return status+'<form class="display-refresh-form" method="post" action="/display-refresh"><input type="hidden" name="csrf" value="'+esc(device['csrf'])+'"><input type="hidden" name="controller" value="'+esc(device.get('controller_id',''))+'"><input type="hidden" name="return" value="'+esc(device.get('refresh_path','/'))+'"><button class="refresh-link" title="Seite neu laden und Display vollständig auffrischen">Aktualisieren</button></form>'
+    return status+'<a href="">Aktualisieren</a>'
 
 def default_columns(entity):
     domain=entity.split('.')[0]
@@ -492,12 +495,12 @@ def action_href(config,entity):
 
 
 def entity_detail(config,entity,item,device):
-    device=dict(device,view=config.get('dashboard_view',{}).get('path'))
+    device=dict(device,view=config.get('dashboard_view',{}).get('path'),refresh_path='/entity?'+urlencode({'entity':entity}))
     config=dict(config,entities=[entity],actions={})
     card={'type':'entity','entity':entity,'columns':12,'read_only':entity not in config.get('control_entities',[])}
     body='<div class="panel">'+masthead(label(config,entity,item),device=device)+'<div class="climate-main"><a class="back" href="/">‹ Übersicht</a>'
     body+=tile(config,card,{entity:item},device,0,cell=True)
-    return body+'<p>'+live_footer()+'</p></div></div><script src="/panel.js"></script>'
+    return body+'<p>'+live_footer(device)+'</p></div></div><script src="/panel.js"></script>'
 
 def tile(config,card,states,device,page_index,cell=False):
     columns=card_columns(card);width=columns*100/12
@@ -545,6 +548,7 @@ def dashboard(config,states,device,page_index,refresh):
     groups=dashboard_layout_pages(dashboard_cards(config));pages=len(groups);page_index=max(0,min(pages-1,page_index))
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
+    device['refresh_path']='/'+query(page_index)
     rows=sum(block.get('rows',0) for block in groups[page_index])
     fit_rows=max(sum(block.get('rows',0) for block in group) for group in groups)
     fit_headings=max(sum(1 for block in group if block['kind']=='heading') for group in groups)
@@ -572,7 +576,7 @@ def dashboard(config,states,device,page_index,refresh):
             body+='<div class="tile-heading-card">'+esc(block['cards'][0]['name'])+'</div>'
         else:body+=render_grid(config,block,states,device,page_index)
     body+='</div>'
-    body+='<footer class="bottom"><div class="live-line">'+live_footer()+'</div>'
+    body+='<footer class="bottom"><div class="live-line">'+live_footer(device)+'</div>'
     if pages>1:
         body+='<nav class="pagination" aria-label="Dashboard-Seiten">'
         body+='<a class="pager"'+(' href="'+query(page_index-1)+'"' if page_index else ' aria-disabled="true"')+'>Zurück</a>'
@@ -607,7 +611,7 @@ def climate_panel(config,entity,item,device,more=False):
     return body+'</div>'
 
 def climate(config,entity,item,device):
-    device=dict(device,view=config.get('dashboard_view',{}).get('path'))
+    device=dict(device,view=config.get('dashboard_view',{}).get('path'),refresh_path='/?'+urlencode(dict({'klima':entity},**({'view':config['dashboard_view']['path']} if config.get('dashboard_view',{}).get('path') else {}))))
     attrs=item.get('attributes',{});available=item['state'] not in {'unknown','unavailable'} and not config.get('read_only',{}).get(entity,False)
     body='<div class="panel"><div class="climate-main climate-detail"><div style="float:right">'+exit_form(device)+'</div><a class="back" href="./">‹ Übersicht</a><div style="clear:both"></div>'+climate_panel(config,entity,item,device)
     for title,action,values,current,names in settings(item):
@@ -616,4 +620,4 @@ def climate(config,entity,item,device):
         for value in values:
             body+='<option value="'+esc(value)+'"'+(' selected' if value==current else '')+'>'+esc(setting_name(value,names))+'</option>'
         body+='</select></td><td class="apply"><button id="'+bid(entity,action+'-apply')+'"'+(' disabled' if not available else '')+'>Setzen</button></td></tr></table></form></section>'
-    return body+'<p class="climate-foot">−/+ ändert nur die Solltemperatur. Die Symbole darunter setzen direkt die Betriebsart.</p><p class="climate-foot">'+live_footer()+'</p></div></div><script src="/panel.js"></script>'
+    return body+'<p class="climate-foot">−/+ ändert nur die Solltemperatur. Die Symbole darunter setzen direkt die Betriebsart.</p><p class="climate-foot">'+live_footer(device)+'</p></div></div><script src="/panel.js"></script>'

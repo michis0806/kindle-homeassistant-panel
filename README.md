@@ -54,32 +54,21 @@ Python 3.10+ is needed on the computer. Jailbreak and KUAL must already work. Th
 
 **Run the installer separately for each physical Kindle.** It creates a unique controller ID. Upgrades retain that ID; if cloning a prepared folder for another Kindle, run with `--new-device-id` on the new device. The ID routes the exit signal; it is not an API credential. Pairing cookies provide device authorization. Each Kindle has independent pairing, name, dashboard, start view, revocation and exit signal (up to 32 registered devices).
 
-Home Assistant app updates do not update the USB extension; install starter updates separately on each Kindle. Starter 1.1 configures the native title/status bars before creating the content window and waits for a native acknowledgement (with a bounded fallback). Returning Home occurs before optional registry cleanup, so a busy registration database cannot prevent it.
+Home Assistant app updates do not update the USB extension; install starter updates separately on each Kindle. Starter 1.2 retains the fullscreen setup that configures the native title/status bars before creating the content window and waits for a native acknowledgement (with a bounded fallback). Returning Home occurs before optional registry cleanup, so a busy registration database cannot prevent it.
 
 The native starter backs up its application registration before modifying it. The installer backs up an existing extension locally and refuses to overwrite saved active light/power state. Native registration and frontlight paths are firmware-specific; the version guard does not prove compatibility with other models. Do not use this starter on another model without adapting and testing those paths.
 
 ## Device behavior
 
-Refresh remains manual through the bottom “Aktualisieren” button. No periodic native display refresh is installed or scheduled.
+Refresh remains manual through the bottom “Aktualisieren” button. With starter 1.2 it reloads the page, waits for the new page to report readiness, and asks only that Kindle to perform a flashing full display update through its native `eips` tool. The current pixels are retained; the framebuffer is not cleared. Older starters still reload the page but cannot perform the native refresh. No periodic full-refresh timer is installed. Physical full-refresh behavior still needs confirmation on the connected PW1.
 
 The crossed-out HA icon exits to the Kindle home screen and restores frontlight and screensaver settings. Exit requires connectivity to the app. The hardware power button remains the normal Kindle sleep control. The tested PW1 starter turns the light fully off after 30 seconds without touch and restores it on touch; this uses touch events, not motion sensing. KUAL also provides diagnostic and recovery actions.
 
 The server retains device approval and configuration in `/data/panel.json` across app updates. The Home Assistant API credential stays inside the app. Back up the app's data and the HA dashboard storage. Unpair a lost device in the app interface.
 
-## Development
+## Basic validation
 
-```sh
-python3 -m unittest discover -s kindle_panel -p 'test_*.py'
-node kindle_panel/test_layout.js
-node kindle_panel/test_panel.js
-node kindle_panel/test_live.js
-node tests/kindle/test_native_start.js
-python3 tests/kindle/test_light_off.py
-python3 tests/kindle/test_visible_exit.py
-python3 -m unittest discover -s tests -p 'test_*.py'
-```
-
-Tests cover pairing/CSRF, dashboard translation, room separation, per-device exit, climate constraints, confirmed commands and incremental DOM updates. Shell tests simulate the PW1 frontlight; tests do not establish compatibility with untested devices. Runtime binaries, personal configuration, backups, firmware and jailbreak downloads are excluded from Git.
+After installing the app, check pairing, the Home Assistant dashboard, and device controls manually. Kindle startup, light and power behavior, and recovery actions require validation on the target device; simulator checks cannot establish compatibility with other Kindle models or firmware. Runtime binaries, personal configuration, backups, firmware and jailbreak downloads are excluded from Git.
 
 ## License
 

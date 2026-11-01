@@ -227,6 +227,27 @@ class App:
                 self.data['exit_generation'] = int(self.data.get('exit_generation', 0)) + 1
             self.save()
 
+    def request_display_refresh(self,token,csrf,controller):
+        device=self.device(token)
+        if not device or not device['approved'] or not hmac.compare_digest(device['csrf'],csrf):raise PermissionError()
+        if controller!=device.get('controller_id',''):raise PermissionError()
+        if not controller:return None
+        with self.lock:
+            counters=self.data.setdefault('refresh_generations',{})
+            generation=int(counters.get(controller,{}).get('requested',0))+1
+            counters[controller]={'requested':generation,'ready':int(counters.get(controller,{}).get('ready',0))}
+            self.save()
+        return generation
+
+    def display_refresh_ready(self,token,generation):
+        if not generation or not generation.isdigit() or len(generation)>12:return
+        device=self.device(token)
+        if not device or not device['approved'] or not device.get('controller_id'):return
+        with self.lock:
+            counter=self.data.get('refresh_generations',{}).get(device['controller_id'],{})
+            if int(generation)==counter.get('requested') and counter.get('ready')!=int(generation):
+                counter['ready']=int(generation);self.save()
+
     def device(self, token):
         with self.lock:
             item = self.data['devices'].get(digest(token))
@@ -387,6 +408,11 @@ class Handler(BaseHTTPRequestHandler):
                 raw=self.app.snapshot()
                 counter=raw.get('exit_generations',{}).get(controller,0) if controller else raw.get('exit_generation',0)
                 return self.send(200,str(counter),content_type='text/plain; charset=utf-8')
+            if path == '/kiosk-refresh':
+                controller=parse_qs(urlsplit(self.path).query).get('controller',[''])[0]
+                if not re.fullmatch(r'[a-f0-9]{32}',controller):return self.send(400,'Invalid device ID',content_type='text/plain')
+                counter=self.app.snapshot().get('refresh_generations',{}).get(controller,{})
+                return self.send(200,str(counter.get('ready',0)),content_type='text/plain; charset=utf-8')
             if path == '/health':
                 self.app.api('')
                 return self.send(200, page('OK', 'OK'))
@@ -395,6 +421,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not device or not device['approved']:
                     return self.send(403, json.dumps({'error': 'pairing_required'}), content_type='application/json')
                 if path == '/updates.json':
+                    self.app.display_refresh_ready(self.token(),self.headers.get('X-Panel-Refresh',''))
                     self.app.record_viewport(self.token(),self.headers.get('X-Panel-Viewport',''),'kindle' in self.headers.get('User-Agent','').lower())
                     try:
                         return self.send(200, json.dumps(self.app.panel_snapshot(self.token(),parse_qs(urlsplit(self.path).query).get('view',[None])[0])), content_type='application/json')
@@ -481,6 +508,15 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     raise ValueError()
             else:
+                if path == '/display-refresh':
+                    generation=self.app.request_display_refresh(self.token(),field('csrf'),field('controller'))
+                    destination=field('return')
+                    parsed=urlsplit(destination)
+                    if parsed.scheme or parsed.netloc or parsed.path not in {'/','/entity'} or '\\' in destination or any(ord(c)<32 for c in destination):destination='/'
+                    parsed=urlsplit(destination);query=parse_qs(parsed.query)
+                    query.pop('refresh',None)
+                    if generation is not None:query['refresh']=[str(generation)]
+                    return self.redirect(parsed.path+('?' + urlencode(query,doseq=True) if query else ''))
                 if path == '/kiosk-exit':
                     self.app.request_kiosk_exit(self.token(), field('csrf'), field('controller'))
                     return self.send(200, page('Kindle verlassen', '<h1>Kindle wird beendet …</h1><p>Die Kindle-Startseite sollte gleich erscheinen.</p><p><a href="./">Zur Übersicht</a></p>', kindle=True))

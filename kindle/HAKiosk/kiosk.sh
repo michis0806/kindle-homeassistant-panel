@@ -114,45 +114,6 @@ case "$1" in
         sleep 1
         lipc-set-prop com.lab126.appmgrd start "app://com.lab126.browser/?view=$URL"
         ;;
-    touch-light-test)
-        sh "$ROOT/kiosk.sh" _fullscreen
-        RESULT=$?
-        if [ "$RESULT" -eq 0 ]; then
-            sh "$ROOT/touch-light.sh" test
-            echo "Touch observer test result: $?"
-        fi
-        sh "$ROOT/kiosk.sh" home
-        ;;
-    light-check)
-        sh "$ROOT/touch-light.sh" stop || exit 1
-        restore_light || exit 1
-        LEVEL=$(lipc-get-prop com.lab126.powerd flIntensity 2>/dev/null) || exit 1
-        case "$LEVEL" in [0-9]|1[0-9]|2[0-4]) ;; *) echo 'Unsupported brightness reading'; exit 1;; esac
-        printf '%s\n' "$LEVEL" > "$STATE/light-original"
-        trap 'restore_light' 0
-        trap 'exit 1' 1 2 15
-        TEST_LEVEL=2
-        if [ "$LEVEL" -le 4 ]; then TEST_LEVEL=14; fi
-        echo "Direct brightness test: original=$LEVEL temporary=$TEST_LEVEL"
-        lipc-set-prop com.lab126.powerd flIntensity "$TEST_LEVEL" || exit 1
-        echo "Brightness read-back: $(lipc-get-prop com.lab126.powerd flIntensity)"
-        sleep 5
-        restore_light || exit 1
-        trap - 0 1 2 15
-        echo "Direct brightness test complete; read-back: $(lipc-get-prop com.lab126.powerd flIntensity)"
-        ;;
-    fullscreen-test)
-        # Keep one foreground process alive; no detached tool or nohup required.
-        sh "$ROOT/kiosk.sh" _fullscreen
-        RESULT=$?
-        echo "Native start result: $RESULT"
-        if [ "$RESULT" -eq 0 ]; then
-            sleep 10
-            capture_runtime
-            sleep 35
-        fi
-        sh "$ROOT/kiosk.sh" home
-        ;;
     fullscreen)
         sh "$ROOT/kiosk.sh" _fullscreen || exit 1
         # Keep the proven foreground observer alive; no nohup dependency.
@@ -177,6 +138,10 @@ case "$1" in
         BASE=$("$ROOT/tools/kiosk-http-get" "$STATUS_URL") || { echo 'Cannot initialize exit button'; exit 1; }
         case "$BASE" in ''|*[!0-9]*) echo 'Invalid exit status'; exit 1;; esac
         printf '%s\n' "$BASE" > "$STATE/exit-generation"
+        if [ -n "$CONTROLLER" ]; then
+            REFRESH_BASE=$("$ROOT/tools/kiosk-http-get" "${URL%/}/kiosk-refresh?controller=$CONTROLLER" 2>/dev/null)
+            case "$REFRESH_BASE" in ''|*[!0-9]*) rm -f "$STATE/refresh-generation";; *) printf '%s\n' "$REFRESH_BASE" > "$STATE/refresh-generation";; esac
+        fi
         register_native || exit 1
         OLD=$(lipc-get-prop com.lab126.powerd preventScreenSaver 2>/dev/null)
         case "$OLD" in 0|1) printf '%s\n' "$OLD" > "$STATE/prevent-screensaver";; *) echo 'Cannot read power state'; exit 1;; esac

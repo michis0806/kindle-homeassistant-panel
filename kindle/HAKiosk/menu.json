@@ -37,25 +37,9 @@
           "status": false
         },
         {
-          "name": "Licht ganz aus: 5s Test",
-          "action": "sh ./light-off-test.sh test",
-          "priority": 6,
-          "exitmenu": true,
-          "refresh": false,
-          "status": false
-        },
-        {
           "name": "Licht wiederherstellen",
-          "action": "sh ./light-off-test.sh restore",
+          "action": "sh ./frontlight-recovery.sh",
           "priority": 7,
-          "exitmenu": true,
-          "refresh": false,
-          "status": false
-        },
-        {
-          "name": "Beendenknopf 90s testen",
-          "action": "sh ./kiosk.sh touch-light-test",
-          "priority": 8,
           "exitmenu": true,
           "refresh": false,
           "status": false

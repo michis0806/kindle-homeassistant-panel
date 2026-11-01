@@ -5,7 +5,6 @@ STATE="$ROOT/state"
 EVTEST="$ROOT/tools/bin/evtest"
 INPUT=/dev/input/event0
 IDLE_SECONDS=30
-RUN_SECONDS=90
 DIM_LEVEL=0
 HW=/sys/devices/system/fl_tps6116x/fl_tps6116x0/fl_intensity
 read_hardware() {
@@ -48,7 +47,7 @@ stop_running() {
     fi
     CMD=$(tr '\000' ' ' < "/proc/$PID/cmdline")
     case "$CMD" in
-        *"$ROOT/touch-light.sh run"*|*"$ROOT/touch-light.sh test"*|*"$ROOT/touch-light-v2.sh run"*|*"$ROOT/touch-light-v2.sh test"*|*"$ROOT/touch-light-v3.sh run"*|*"$ROOT/touch-light-v3.sh test"*) ;;
+        *"$ROOT/touch-light.sh run"*|*"$ROOT/touch-light.sh test"*|*"$ROOT/touch-light-v2.sh run"*|*"$ROOT/touch-light-v2.sh test"*|*"$ROOT/touch-light-v3.sh run"*|*"$ROOT/touch-light-v3.sh test"*|*"$ROOT/touch-light-v4.sh run"*|*"$ROOT/touch-light-v4.sh test"*) ;;
         *) echo 'Observer PID no longer belongs to this app'; rm -f "$STATE/touch-light.pid"; return 0;;
     esac
     kill "$PID" 2>/dev/null || return 1
@@ -62,7 +61,7 @@ if [ "$1" = collect ]; then
     collect
     exit $?
 fi
-case "$1" in test) ;; run) RUN_SECONDS=0;; *) exit 1;; esac
+[ "$1" = run ] || exit 1
 exec >> "$ROOT/touch-light.log" 2>&1
 printf '\n--- %s: touchscreen light observer ---\n' "$(date)"
 [ -x "$EVTEST" ] && [ -c "$INPUT" ] || { echo 'Touch event reader/device unavailable'; exit 1; }
@@ -126,8 +125,8 @@ sh "$ROOT/touch-light.sh" collect "$WORK" < "$WORK/events" &
 COLLECT_PID=$!
 sleep 1
 kill -0 "$EV_PID" 2>/dev/null && kill -0 "$COLLECT_PID" 2>/dev/null || { echo 'Event reader failed to start'; exit 1; }
-echo "Reader running; idle=${IDLE_SECONDS}s duration=${RUN_SECONDS}s original=$ORIGINAL bright=$BRIGHT_LEVEL dim=$DIM_LEVEL"
-# Both bounded tests and permanent mode stop when the native app exits.
+echo "Reader running; idle=${IDLE_SECONDS}s original=$ORIGINAL bright=$BRIGHT_LEVEL dim=$DIM_LEVEL"
+# Stop when the native app exits.
 find_kiosk_pid() {
     for PROC in /proc/[0-9]*/cmdline; do
         [ -r "$PROC" ] || continue
@@ -150,15 +149,18 @@ if [ -n "$CONTROLLER" ]; then
 fi
 BASE=$(cat "$STATE/exit-generation") || exit 1
 case "$BASE" in ''|*[!0-9]*) echo 'Invalid baseline exit status'; exit 1;; esac
+REFRESH_URL=
+REFRESH_BASE=$(cat "$STATE/refresh-generation" 2>/dev/null)
+case "$REFRESH_BASE" in ''|*[!0-9]*) REFRESH_BASE=;; esac
+REFRESH_AT=0
+if [ -n "$CONTROLLER" ]; then REFRESH_URL="${URL%/}/kiosk-refresh?controller=$CONTROLLER"; fi
+NEXT_REFRESH_POLL=0
 NEXT_POLL=0
 LEVEL=
 while :; do
     kill -0 "$EV_PID" 2>/dev/null && kill -0 "$COLLECT_PID" 2>/dev/null || { echo 'Event reader stopped; aborting'; exit 1; }
     now || exit 1
     [ -d "$ROOT" ] && kill -0 "$APP_PID" 2>/dev/null || { echo 'Native kiosk stopped'; break; }
-    if [ "$RUN_SECONDS" -gt 0 ]; then
-        [ $((NOW - START)) -lt "$RUN_SECONDS" ] || break
-    fi
     if [ "$NOW" -ge "$NEXT_POLL" ]; then
         NEXT_POLL=$((NOW + 2))
         GENERATION=$("$ROOT/tools/kiosk-http-get" "$STATUS_URL" 2>/dev/null)
@@ -167,8 +169,26 @@ while :; do
             *) if [ "$GENERATION" != "$BASE" ]; then echo 'Visible exit button requested Home'; break; fi;;
         esac
     fi
+    if [ "$NOW" -ge "$NEXT_REFRESH_POLL" ] 2>/dev/null && [ -n "$REFRESH_URL" ]; then
+        NEXT_REFRESH_POLL=$((NOW + 2))
+        READY=$("$ROOT/tools/kiosk-http-get" "$REFRESH_URL" 2>/dev/null)
+        case "$READY" in
+            ''|*[!0-9]*) ;;
+            *)
+                if [ -z "$REFRESH_BASE" ]; then REFRESH_BASE=$READY
+                elif [ "$READY" != "$REFRESH_BASE" ]; then
+                    REFRESH_BASE=$READY
+                    REFRESH_AT=$((NOW + 1))
+                fi;;
+        esac
+    fi
     LAST=$(cat "$WORK/last-touch")
     case "$LAST" in ''|*[!0-9]*) echo 'Invalid activity time'; exit 1;; esac
+    if [ "$REFRESH_AT" -gt 0 ] && [ "$NOW" -ge "$REFRESH_AT" ] && [ $((NOW - LAST)) -ge 2 ]; then
+        # One request, one attempt. Network errors never trigger a display flash.
+        REFRESH_AT=0
+        if sh "$ROOT/display-refresh.sh"; then echo 'Manual full refresh completed'; else echo 'Manual full refresh failed; see display-refresh.log'; fi
+    fi
     TARGET=$BRIGHT_LEVEL
     if [ $((NOW - LAST)) -ge "$IDLE_SECONDS" ]; then TARGET=$DIM_LEVEL; fi
     if [ "$LEVEL" != "$TARGET" ]; then

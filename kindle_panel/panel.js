@@ -101,6 +101,10 @@
         try {
             xhr.open(method, url, true);
             if (method==='GET' && url.indexOf('/updates.json')===0 && window.KindlePanelLayout) { xhr.setRequestHeader('X-Panel-Viewport',JSON.stringify(window.KindlePanelLayout.metrics())); }
+            if (method==='GET' && url.indexOf('/updates.json')===0) {
+                var refresh=/(?:[?&])refresh=([0-9]{1,12})(?:&|$)/.exec(window.location?window.location.search:'');
+                if (refresh) { xhr.setRequestHeader('X-Panel-Refresh',refresh[1]); }
+            }
             if (body !== null) { xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); }
             timer = setTimeout(function () { finish(0, null); xhr.abort(); }, 12000);
             xhr.send(body);
