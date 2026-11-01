@@ -15,6 +15,7 @@ jobs:
           node-version: '22'
       - run: pip install --require-hashes -r kindle_panel/requirements.txt
       - run: python -m unittest discover -s kindle_panel -p 'test_*.py'
+      - run: node kindle_panel/test_layout.js
       - run: node kindle_panel/test_panel.js && node kindle_panel/test_live.js
       - run: python -m unittest discover -s tests -p 'test_*.py'
       - run: node tests/kindle/test_native_start.js

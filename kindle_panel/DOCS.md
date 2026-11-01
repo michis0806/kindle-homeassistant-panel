@@ -21,4 +21,6 @@ Lichter sind einzelne kompakte Tasten mit Name und Glühbirne (An: ausgefüllt; 
 
 Cover-Karten bieten ↑ Öffnen und ↓ Schließen entsprechend den Gerätefähigkeiten. Skripte starten bei Berührung direkt ohne zusätzliche Parameter; bereits laufende Skripte sind gesperrt. Der Lüfter ist über eine Ein-/Aus-Taste bedienbar. Die Kindle-Seite nutzt die verfügbare Breite ohne fortlaufende JavaScript-Pixelbreitenkorrektur. Der Viewport bleibt für die Touchbedienung auf einer festen Skalierung.
 
-Auf hohen Displays werden Tasten, Cover-Pfeile und Klimabedienung größer dargestellt, wenn alle Elemente weiterhin auf die Seite passen. Kleine Displays und umfangreiche Ansichten bleiben kompakt. Die Breite bleibt unverändert.
+Live-Ansicht und Vorschau bestimmen einmalig die verfügbare Fensterhöhe und wählen dazu passende Tastenhöhen. Karten werden mit berechneten Positionen angeordnet; die Breite bleibt unverändert. Die Vorschau verwendet nach Möglichkeit die gemeldete Fenstergröße des ausgewählten Kindle. Zur Layoutdiagnose erscheinen nur Zahlen zu Fenstermaßen und Tastenhöhen im lokalen App-Log, keine Entitätswerte oder Zugangsdaten.
+
+Das HA-Dashboard bleibt die Quelle für Anordnung, Namen, Icons und Aktionen. Explizites „more-info“ öffnet lokale Details; „navigate“ kann Ansichten desselben Dashboards öffnen. Freie Service-/URL-Aktionen, Bestätigungen und abweichende Icon-Aktionen bleiben mit Hinweis gesperrt. Halten und Doppeltippen werden noch nicht übersetzt. Verschachtelte Stapel und Darstellungsoptionen werden teilweise angenähert.

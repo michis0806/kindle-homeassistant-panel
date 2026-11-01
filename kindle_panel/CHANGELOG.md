@@ -1,3 +1,11 @@
+# 0.10.0
+
+Dashboard-Aktionen werden als eigene Metadaten übersetzt. Explizites More-info öffnet eine lokale Detailansicht; Navigation innerhalb des zugewiesenen Dashboards wird übernommen. Nicht unterstützte Dienste, Bestätigungen und getrennte Icon-Aktionen werden mit Warnung gesperrt. Karten-Icons werden auch auf Licht- und Lüftertasten übernommen.
+
+# 0.9.3
+
+Einmalige Höhenwahl anhand des tatsächlichen Browserfensters für Live-Ansicht und Vorschau. Berechnete Kartenpositionen ersetzen browserabhängige Tabellen-Zeilenabstände. Die Vorschau kann die gemeldeten Kindle-Fenstermaße verwenden. Vom HA-Editor erzeugte Tippaktionen auf genau das eigene Skript ohne Parameter bleiben direkt bedienbar. Nur numerische Fenstermaße werden zur lokalen Layoutdiagnose protokolliert.
+
 # 0.9.2
 
 Höhere Licht-/Skript-/Lüftertasten, größere Cover-Pfeile und größere Klimabedienung auf hohen Displays. Die großzügige Darstellung wird per CSS nur genutzt, wenn die gesamte Seite weiterhin passt. Kleinere Displays und umfangreichere Ansichten bleiben kompakt; die bestätigte stabile Breite wird nicht verändert.

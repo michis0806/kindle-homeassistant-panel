@@ -5,6 +5,8 @@ import json
 import os
 import re
 import time
+from urllib.parse import urlsplit
+from dashboard_actions import normalize_actions
 
 PATH = 'kindle-panel'
 DOMAINS = {'sensor','binary_sensor','climate','light','switch','input_boolean','scene','weather','cover','script','fan'}
@@ -76,7 +78,16 @@ def ensure_dashboard(config, call=commands):
     return call([{'type':'lovelace/config','url_path':PATH}])[0]
 
 
-def translate(raw, display=None):
+def own_script_action(entity,action):
+    if not entity.startswith('script.') or not isinstance(action,dict):return False
+    if action.get('action') not in {'perform-action','call-service'}:return False
+    if action.get('data') or action.get('service_data') or action.get('confirmation'):return False
+    service=action.get('perform_action') or action.get('service')
+    target=action.get('target') or {}
+    if service==entity:return target=={}
+    return service=='script.turn_on' and target in ({'entity_id':entity},{'entity_id':[entity]})
+
+def translate(raw, display=None, dashboard_path=PATH):
     display=display or {}
     if not isinstance(raw,dict) or not isinstance(raw.get('views'),list):
         raise ValueError('Dashboard has no views')
@@ -125,20 +136,38 @@ def translate(raw, display=None):
                     columns=6;warn('Klimapanels benötigen mindestens halbe Breite.')
                 if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.','script.','fan.','cover.')) and columns<6:
                     columns=6;warn('Bedienbare Kacheln benötigen mindestens halbe Breite.')
+                source_actions=normalize_actions(card,entity)
                 action=card.get('tap_action',{}).get('action') if isinstance(card.get('tap_action',{}),dict) else None
                 read_only=action=='none'
-                if action not in (None,'none','more-info','toggle'):
+                if action not in (None,'none','more-info','toggle','navigate') and not own_script_action(entity,card.get('tap_action')):
                     read_only=True;warn('Spezielle Tipp-Aktion für '+entity+' wird nicht ausgeführt.')
+                blocked_actions=False
+                if action=='navigate':
+                    destination=urlsplit(source_actions['tap'].get('navigation_path','')).path.rstrip('/')
+                    base='/'+dashboard_path
+                    known={base}|{base+'/'+str(v.get('path',i)) for i,v in enumerate(raw['views']) if isinstance(v,dict)}
+                    if destination not in known:warn('Navigation außerhalb der übersetzten Ansichten für '+entity+' wird noch nicht unterstützt.')
+                if source_actions['tap'].get('confirmation'):
+                    blocked_actions=True
+                    read_only=True;warn('Bestätigung für '+entity+' wird noch nicht übersetzt; Karte bleibt schreibgeschützt.')
+                for gesture in ('hold','double_tap'):
+                    if source_actions[gesture]['kind'] not in {'default','none'}:warn('Zusatzgeste '+gesture+' für '+entity+' wird noch nicht übersetzt.')
+                icon_action=source_actions['icon']
+                if icon_action.get('explicit') and icon_action!=source_actions['tap']:
+                    blocked_actions=True;read_only=True
+                    warn('Separate Icon-Tippaktion für '+entity+' wird noch nicht übersetzt; Karte bleibt schreibgeschützt.')
+                if source_actions['tap']['kind']=='unsupported':read_only=True
                 for feature in card.get('features',[]):
                     if isinstance(feature,dict) and feature.get('type') not in {'climate-hvac-modes','climate-temperature','toggle','cover-open-close'}:
                         warn('Zusatzbedienung '+str(feature.get('type'))+' wird noch nicht übersetzt.')
                 name=card.get('name')
                 if not isinstance(name,str):name=None
-                icon=card.get('icon');icon=icon if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon) else None
+                icon=card.get('icon');icon=icon.replace('hass:','mdi:',1) if isinstance(icon,str) and icon.startswith('hass:') else icon;icon=icon if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon) else None
                 output.append({'type':'climate' if entity.startswith('climate.') else 'entity',
                     'entity':entity,'name':name,'icon':icon,'columns':columns,'read_only':read_only,
                     'width_set':'columns' in card.get('grid_options',{}) or forced_columns is not None,
-                    'rows':card.get('grid_options',{}).get('rows')})
+                    'rows':card.get('grid_options',{}).get('rows'),'source_kind':kind,'actions':source_actions,'blocked_actions':blocked_actions,
+                    'presentation':{key:copy.deepcopy(card[key]) for key in ('show_name','show_icon','hide_state','vertical','features_position','features') if key in card}})
                 if entity not in all_entities:all_entities.append(entity)
                 if entity.split('.')[0] in CONTROLS and not read_only and entity not in controls:controls.append(entity)
             return output
@@ -174,8 +203,8 @@ def translate(raw, display=None):
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
     selected_display={entity:display[entity] for entity in all_entities if entity in display}
-    revision=hashlib.sha256(json.dumps([raw,selected_display,'four-column-stable-3'],sort_keys=True).encode()).hexdigest()
-    return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display}
+    revision=hashlib.sha256(json.dumps([raw,selected_display,dashboard_path,'dashboard-source-1'],sort_keys=True).encode()).hexdigest()
+    return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display,'url_path':dashboard_path}
 
 
 def view_config(base, model, path=None):
@@ -185,6 +214,10 @@ def view_config(base, model, path=None):
     result.update(entities=[c['entity'] for c in cards if 'entity' in c],
         labels={c['entity']:c['name'] for c in cards if 'entity' in c and c.get('name')},
         icons={c['entity']:c.get('icon') or model.get('display',{}).get(c['entity'],{}).get('icon') for c in cards if 'entity' in c},
+        dashboard_path=base.get('dashboard_path',model.get('url_path',PATH)),
+        blocked_actions={c['entity']:c.get('blocked_actions',False) for c in cards if 'entity' in c},
+        actions={c['entity']:c.get('actions',{}) for c in cards if 'entity' in c},
+        action_entities=list(model['entities']),
         display_precision={entity:entry['precision'] for entity,entry in model.get('display',{}).items() if 'precision' in entry},
         columns={c['entity']:c['columns'] for c in cards if 'entity' in c},
         read_only={c['entity']:c['read_only'] for c in cards if 'entity' in c},
@@ -211,6 +244,7 @@ class Source:
                     entity=entry.get('ei')
                     if not valid_entity(entity):continue
                     info={};precision=entry.get('dp');icon=entry.get('ic')
+                    if isinstance(icon,str) and icon.startswith('hass:'):icon='mdi:'+icon[5:]
                     if isinstance(precision,int) and not isinstance(precision,bool) and 0<=precision<=20:info['precision']=precision
                     if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon):info['icon']=icon
                     if info:display[entity]=info
@@ -221,7 +255,7 @@ class Source:
         for path in paths:
             try:
                 raw=self.call([{'type':'lovelace/config','url_path':path}])[0]
-                model=translate(raw,display)
+                model=translate(raw,display,path)
                 with self.lock:self.models[path]=model;self.errors.pop(path,None)
             except Exception as error:
                 with self.lock:

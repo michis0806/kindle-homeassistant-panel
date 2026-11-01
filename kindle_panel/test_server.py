@@ -235,9 +235,10 @@ class PanelTests(unittest.TestCase):
         body=self.request(self.public,headers=headers)[2]
         self.assertIn('id="e-climate-test-plus"',body)
         self.assertIn('id="e-light-test-toggle"',body)
-        self.assertIn('<colgroup>'+('<col style="width:25%">'*4)+'</colgroup>',body)
+        self.assertIn('class="grid-card grid-y-',body)
+        self.assertNotIn('rowspan=',body)
         self.assertIn('class="tile tile-cell" style="width:100%"',body)
-        self.assertIn('class="four-grid"',body)
+        self.assertIn('class="four-grid grid-h-',body)
         self.assertIn('user-scalable=no',body)
 
     def install_room_source(self):
@@ -363,6 +364,23 @@ class PanelTests(unittest.TestCase):
         self.assertTrue(patches['e-script-ventilate-run']['disabled'])
         self.assertEqual(patches['e-cover-shade-cover-status']['text'],'Offen · 100 %')
 
+    def test_source_more_info_and_navigation_are_translated_without_sending_commands(self):
+        token,_=self.pair();headers={'Cookie':COOKIE+'='+token}
+        model=ha_dashboard.translate({'views':[{'path':'home','cards':[
+            {'type':'tile','entity':'light.test','tap_action':{'action':'more-info'}},
+            {'type':'tile','entity':'light.other','tap_action':{'action':'navigate','navigation_path':'/kindle-panel/other'}}]},
+            {'path':'other','cards':[]}]})
+        class Source:
+            def model(self,path):return model
+        self.app.dashboard_source=Source()
+        body=self.request(self.public,headers=headers)[2]
+        self.assertIn('href="/entity?entity=light.test"',body)
+        self.assertIn('href="/?view=other"',body)
+        status,_,body=self.request(self.public,path='/entity?entity=light.test',headers=headers)
+        self.assertEqual(status,200);self.assertIn('e-light-test-toggle',body)
+        self.assertEqual(self.request(self.public,path='/entity?entity=light.private',headers=headers)[0],404)
+        self.assertEqual(self.calls,[])
+
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32
         self.app.bind_controller(a,ca);self.app.bind_controller(b,cb)
@@ -379,6 +397,8 @@ class PanelTests(unittest.TestCase):
         status,_,body=self.request(self.admin,path='/admin/preview?device='+digest(token),headers={'X-Remote-User-Id':'admin'})
         self.assertEqual(status,200)
         self.assertNotIn('<form',body);self.assertNotIn('panel.js',body)
+        self.assertIn('<script src="layout.js"></script>',body)
+        self.assertEqual(self.request(self.admin,path='/admin/layout.js',headers={'X-Remote-User-Id':'admin'})[0],200)
         self.assertIn('e-light-test-toggle',body)
         self.assertEqual(self.calls,[])
         self.assertEqual(self.request(self.public,path='/admin/preview')[0],404)

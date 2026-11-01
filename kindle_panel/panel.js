@@ -99,6 +99,7 @@
         };
         try {
             xhr.open(method, url, true);
+            if (method==='GET' && url.indexOf('/updates.json')===0 && window.KindlePanelLayout) { xhr.setRequestHeader('X-Panel-Viewport',JSON.stringify(window.KindlePanelLayout.metrics())); }
             if (body !== null) { xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); }
             timer = setTimeout(function () { finish(0, null); xhr.abort(); }, 12000);
             xhr.send(body);

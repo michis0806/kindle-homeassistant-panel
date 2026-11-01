@@ -10,6 +10,7 @@ import html
 from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -45,6 +46,7 @@ class App:
         self.panel_caches = {}
         self.unit_cache = None
         self.state_cache = None
+        self.viewport_reports = {}
         self.dashboard_source = None
         self.dashboard_stop = threading.Event()
         self.api_override = api
@@ -186,6 +188,26 @@ class App:
             self.panel_caches[key]=(time.monotonic(),result)
             if len(self.panel_caches)>64:self.panel_caches.pop(next(iter(self.panel_caches)))
             return result
+
+    def record_viewport(self,token,raw,kindle=False):
+        if not raw:
+            if not kindle:return
+            report={'pending':True}
+        else:
+            if len(raw)>1024:return
+            try:values=json.loads(raw)
+            except (ValueError,TypeError):return
+            if not isinstance(values,dict):return
+            fields={'inner_w','inner_h','doc_w','doc_h','screen_w','screen_h','dpr','button_h','unit','rows','fixed_h'}
+            report={k:v for k,v in values.items() if k in fields and isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) and 0<=v<=10000}
+            if not report:return
+        key=digest(token)
+        with self.lock:
+            if self.viewport_reports.get(key)==report:return
+            self.viewport_reports[key]=report
+        # Only display dimensions and a coarse browser type, never credentials,
+        # entity states, IP addresses or full user-agent strings.
+        print('VIEWPORT '+json.dumps(dict(report,client='kindle' if kindle else 'other')),flush=True)
 
     def request_kiosk_exit(self, token, csrf, controller=None):
         device = self.device(token)
@@ -347,8 +369,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         try:
             if self.server.admin:
-                if not self.admin() or path not in {'/admin/','/admin/preview'}:
+                if not self.admin() or path not in {'/admin/','/admin/preview','/admin/layout.js'}:
                     return self.send(403, page('Kein Zugriff', '<h1>Kein Zugriff</h1>'))
+                if path=='/admin/layout.js':return self.send(200,(Path(__file__).parent/'layout.js').read_text(),content_type='application/javascript; charset=utf-8')
                 if path=='/admin/preview':return self.send(200,self.dashboard_preview())
                 return self.send(200, self.admin_page())
             if path == '/kiosk-status':
@@ -361,15 +384,18 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/health':
                 self.app.api('')
                 return self.send(200, page('OK', 'OK'))
-            if path in {'/live', '/live.json', '/live.js', '/updates.json', '/panel.js'}:
+            if path in {'/live', '/live.json', '/live.js', '/updates.json', '/panel.js','/layout.js'}:
                 device = self.app.device(self.token())
                 if not device or not device['approved']:
                     return self.send(403, json.dumps({'error': 'pairing_required'}), content_type='application/json')
                 if path == '/updates.json':
+                    self.app.record_viewport(self.token(),self.headers.get('X-Panel-Viewport',''),'kindle' in self.headers.get('User-Agent','').lower())
                     try:
                         return self.send(200, json.dumps(self.app.panel_snapshot(self.token(),parse_qs(urlsplit(self.path).query).get('view',[None])[0])), content_type='application/json')
                     except Exception:
                         return self.send(503, json.dumps({'error':'upstream_unavailable'}), content_type='application/json')
+                if path == '/layout.js':
+                    return self.send(200,(Path(__file__).parent/'layout.js').read_text(),content_type='application/javascript; charset=utf-8')
                 if path == '/panel.js':
                     return self.send(200, (Path(__file__).parent / 'panel.js').read_text(), content_type='application/javascript; charset=utf-8')
                 if path == '/live.json':
@@ -387,7 +413,7 @@ class Handler(BaseHTTPRequestHandler):
                     'Nur geänderte Anzeigen werden aktualisiert; diese Seite lädt nicht automatisch neu.</p>'
                     '</div></div><script src="/live.js"></script>')
                 return self.send(200, page('Live-Test', body, kindle=True))
-            if path != '/':
+            if path not in {'/','/entity'}:
                 return self.send(404, page('Nicht gefunden', 'Nicht gefunden'))
             token = self.token()
             device = self.app.device(token)
@@ -399,6 +425,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, page('Kindle verbinden', body, 10), new_token)
             controller=parse_qs(urlsplit(self.path).query).get('controller',[''])[0]
             if controller:device=self.app.bind_controller(token,controller)
+            if path=='/entity':
+                entity=parse_qs(urlsplit(self.path).query).get('entity',[''])[0]
+                access=self.app.access_config(token)
+                if entity not in access['entities']:return self.send(404,page('Nicht ausgewählt','Nicht ausgewählt'))
+                item=self.app.states().get(entity,{'state':'unavailable','attributes':{}})
+                config=self.app.render_config(token)
+                return self.send(200,page('Entität',ui.entity_detail(config,entity,item,device),kindle=True))
             climate_entity = parse_qs(urlsplit(self.path).query).get('klima', [''])[0]
             if climate_entity:
                 if climate_entity not in self.app.access_config(token)['entities'] or not climate_entity.startswith('climate.'):
@@ -497,15 +530,18 @@ class Handler(BaseHTTPRequestHandler):
             if entity.startswith('climate.'):item.setdefault('attributes',{})['temperature_unit']=unit
         try:index=int(query.get('seite',['0'])[0])
         except ValueError:index=0
+        if query.get('profile',[''])[0]=='device':
+            with self.app.lock:reported=self.app.viewport_reports.get(key,{})
+            if reported.get('unit') in {52,60,68,80}:config['preferred_layout_unit']=reported['unit']
         body=ui.dashboard(config,states,{'csrf':'preview-only'},index,self.app.refresh)
         body=re.sub(r'<script\b[^>]*>.*?</script>','',body,flags=re.S)
         body=body.replace('Live-Verbindung wird gestartet …','Vorschau')
         body=re.sub(r'<form\b[^>]*>','<div>',body)
         body=body.replace('</form>','</div>')
-        # No forms and no scripts: preview buttons cannot send commands.
+        # Only the isolated layout helper runs; no forms or control scripts.
         if key:
             body=re.sub(r'href="\?([^"]*)"',lambda m:'href="?device='+esc(key)+'&amp;'+m.group(1)+'"',body)
-        return page('Kindle-Vorschau',body,kindle=True)
+        return page('Kindle-Vorschau',body+'<script src="layout.js"></script>',kindle=True)
 
     def admin_page(self):
         config=self.app.snapshot()
@@ -538,11 +574,15 @@ class Handler(BaseHTTPRequestHandler):
         if source:
             query=parse_qs(urlsplit(self.path).query);selected_key=query.get('preview',[''])[0]
             if selected_key not in config['devices']:selected_key=next(iter(config['devices']),'')
-            size=query.get('size',['758'])[0];width,height=(600,800) if size=='600' else (758,1024)
+            size=query.get('size',['device'])[0]
+            with self.app.lock:reported=dict(self.app.viewport_reports.get(selected_key,{}))
+            reported_width=reported.get('inner_w',0);reported_height=reported.get('inner_h',0)
+            detected=(int(reported_width),int(reported_height)) if 320<=reported_width<=2000 and 400<=reported_height<=2600 else (758,1024)
+            width,height=(600,800) if size=='600' else (758,1024) if size=='758' else detected
             body+='<h2>Kindle-Vorschau</h2><form method="get" action="./"><label>Gerät <select name="preview">'
             for key,device in config['devices'].items():body+='<option value="'+esc(key)+'"'+(' selected' if key==selected_key else '')+'>'+esc(device.get('name') or 'Kindle '+device['code'])+'</option>'
-            body+='</select></label><label>Vorschaugröße <select name="size"><option value="758"'+(' selected' if size!='600' else '')+'>758 × 1024</option><option value="600"'+(' selected' if size=='600' else '')+'>600 × 800</option></select></label><button>Vorschau aktualisieren</button></form>'
-            body+='<div style="max-width:100%;overflow:auto;margin-top:16px"><iframe title="Kindle-Vorschau" src="preview?device='+esc(selected_key)+'" width="'+str(width)+'" height="'+str(height)+'" style="border:1px solid #aaa;display:block"></iframe></div>'
+            body+='</select></label><label>Vorschaugröße <select name="size"><option value="device"'+(' selected' if size=='device' else '')+'>Kindle ('+str(detected[0])+' × '+str(detected[1])+')</option><option value="758"'+(' selected' if size=='758' else '')+'>758 × 1024</option><option value="600"'+(' selected' if size=='600' else '')+'>600 × 800</option></select></label><button>Vorschau aktualisieren</button></form>'
+            body+='<div style="max-width:100%;overflow:auto;margin-top:16px"><iframe title="Kindle-Vorschau" src="preview?device='+esc(selected_key)+'&amp;profile='+esc(size)+'" width="'+str(width)+'" height="'+str(height)+'" style="border:1px solid #aaa;display:block"></iframe></div>'
             for path,warnings in status['warnings'].items():
                 if warnings:body+='<h3>Hinweise zu '+esc(path)+'</h3><ul>'+''.join('<li>'+esc(warning)+'</li>' for warning in warnings)+'</ul>'
             return page('Kindle Panel verwalten',body)

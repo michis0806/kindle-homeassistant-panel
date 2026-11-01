@@ -74,7 +74,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('id="e-sensor-temp-value">21,0</span>',markup)
         self.assertIn('id="e-sensor-humidity-value">49</span>',markup)
         self.assertIn('badge-pill',markup)
-        self.assertNotIn('tile-label',markup)
+        self.assertNotIn('id="e-sensor-temp-label"',markup)
         self.assertIn(ui.ICONS['mdi:thermometer-lines'],markup)
         patches=ui.updates(config,states)['patches']
         self.assertEqual(next(p['text'] for p in patches if p['id']=='e-sensor-temp-value'),'21,0')
@@ -149,9 +149,24 @@ class DashboardTests(unittest.TestCase):
         rendered=[c['entity'] for block in pages[0] for c in block['cards'] if 'entity' in c]
         self.assertEqual(set(rendered),set(config['entities']));self.assertEqual(len(rendered),len(set(rendered)))
         markup=ui.dashboard(config,{}, {'csrf':'test'},0,30)
-        self.assertIn('colspan="2" rowspan="4"',markup)
+        self.assertIn('grid-card grid-y-0 grid-n-4',markup)
+        self.assertNotIn('rowspan=',markup)
         self.assertNotIn('class="pager"',markup)
         self.assertEqual(ui.label(config,'fan.alcove',{'attributes':{'friendly_name':'Alcove Fan'}}),'Alcove Fan')
+
+    def test_ha_editor_script_actions_start_only_the_same_script_without_arguments(self):
+        for action in ({'action':'perform-action','perform_action':'script.room','target':{}},
+            {'action':'perform-action','perform_action':'script.turn_on','target':{'entity_id':['script.room']}}):
+            model=translate({'views':[{'cards':[{'type':'tile','entity':'script.room','tap_action':action}]}]})
+            config=view_config({},model)
+            self.assertFalse(config['read_only']['script.room'])
+            self.assertEqual(ui.card_units(ui.dashboard_cards(config)[0]),1)
+            self.assertEqual(model['control_entities'],['script.room'])
+        for action in ({'action':'perform-action','perform_action':'script.other'},
+            {'action':'perform-action','perform_action':'script.room','data':{'private_argument':True}},
+            {'action':'perform-action','perform_action':'script.turn_on','target':{'entity_id':['script.room','script.other']}}):
+            model=translate({'views':[{'cards':[{'type':'tile','entity':'script.room','tap_action':action}]}]})
+            self.assertEqual(model['control_entities'],[])
 
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]
