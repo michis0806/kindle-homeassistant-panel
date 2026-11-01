@@ -97,6 +97,16 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(model['display'],{'sensor.temp':{'precision':1,'icon':'mdi:thermometer'}})
         self.assertEqual(source.status()['errors'],{})
 
+    def test_heading_and_unsupported_cards_do_not_become_entity_labels(self):
+        model=translate({'views':[{'cards':[{'type':'heading','heading':'Beleuchtung'},
+            {'type':'tile','entity':'light.desk','name':'Schreibtisch'},
+            {'type':'custom:example','title':'Sonderkarte'}]}]})
+        config=view_config({},model)
+        self.assertEqual(config['labels'],{'light.desk':'Schreibtisch'})
+        self.assertEqual(config['entities'],['light.desk'])
+        markup=ui.dashboard(config,{'light.desk':{'state':'off','attributes':{}}},{'csrf':'test'},0,30)
+        self.assertIn('Beleuchtung',markup);self.assertIn('Sonderkarte',markup)
+
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]
         def call(requests):

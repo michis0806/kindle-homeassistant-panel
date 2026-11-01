@@ -181,7 +181,7 @@ def view_config(base, model, path=None):
     view=next((view for view in model['views'] if view['path']==path),model['views'][0])
     cards=[card for group in view['groups'] for card in group['cards']]
     result.update(entities=[c['entity'] for c in cards if 'entity' in c],
-        labels={c['entity']:c['name'] for c in cards if c.get('name')},
+        labels={c['entity']:c['name'] for c in cards if 'entity' in c and c.get('name')},
         icons={c['entity']:c.get('icon') or model.get('display',{}).get(c['entity'],{}).get('icon') for c in cards if 'entity' in c},
         display_precision={entity:entry['precision'] for entity,entry in model.get('display',{}).items() if 'precision' in entry},
         columns={c['entity']:c['columns'] for c in cards if 'entity' in c},

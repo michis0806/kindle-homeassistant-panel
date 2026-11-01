@@ -1,3 +1,7 @@
+# 0.7.3
+
+Überschriften und Platzhalter ohne Entität blockieren die Dashboard-Übersetzung nicht mehr.
+
 # 0.7.2
 
 Schmale Badges mit HA-Icon, Wert und Einheit; Anzeigepräzision aus der Home-Assistant-Entitätsregistrierung wird einschließlich nachgestellter Nullen übernommen. Vollständiger MDI-Iconsatz.
