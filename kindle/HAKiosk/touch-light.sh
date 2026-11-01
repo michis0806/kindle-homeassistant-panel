@@ -48,7 +48,7 @@ stop_running() {
     fi
     CMD=$(tr '\000' ' ' < "/proc/$PID/cmdline")
     case "$CMD" in
-        *"$ROOT/touch-light.sh run"*|*"$ROOT/touch-light.sh test"*|*"$ROOT/touch-light-v2.sh run"*|*"$ROOT/touch-light-v2.sh test"*) ;;
+        *"$ROOT/touch-light.sh run"*|*"$ROOT/touch-light.sh test"*|*"$ROOT/touch-light-v2.sh run"*|*"$ROOT/touch-light-v2.sh test"*|*"$ROOT/touch-light-v3.sh run"*|*"$ROOT/touch-light-v3.sh test"*) ;;
         *) echo 'Observer PID no longer belongs to this app'; rm -f "$STATE/touch-light.pid"; return 0;;
     esac
     kill "$PID" 2>/dev/null || return 1

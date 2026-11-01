@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<extension><information><name>Home Assistant</name><version>1.0</version><author>Michael Schmid</author><id>HAKiosk</id></information><menus><menu type="json" dynamic="true">menu.json</menu></menus></extension>
+<extension><information><name>Home Assistant</name><version>1.1</version><author>Michael Schmid</author><id>HAKiosk</id></information><menus><menu type="json" dynamic="true">menu.json</menu></menus></extension>

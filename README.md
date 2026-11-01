@@ -48,6 +48,8 @@ Python 3.10+ is needed on the computer. Jailbreak and KUAL must already work. Th
 
 **Run the installer separately for each physical Kindle.** It creates a unique controller ID. Upgrades retain that ID; if cloning a prepared folder for another Kindle, run with `--new-device-id` on the new device. The ID routes the exit signal; it is not an API credential. Pairing cookies provide device authorization. Each Kindle has independent pairing, name, dashboard, start view, revocation and exit signal (up to 32 registered devices).
 
+Home Assistant app updates do not update the USB extension; install starter updates separately on each Kindle. Starter 1.1 configures the native title/status bars before creating the content window and waits for a native acknowledgement (with a bounded fallback). Returning Home occurs before optional registry cleanup, so a busy registration database cannot prevent it.
+
 The native starter backs up its application registration before modifying it. The installer backs up an existing extension locally and refuses to overwrite saved active light/power state. Native registration and frontlight paths are firmware-specific; the version guard does not prove compatibility with other models. Do not use this starter on another model without adapting and testing those paths.
 
 ## Device behavior
@@ -62,6 +64,7 @@ The server retains device approval and configuration in `/data/panel.json` acros
 python3 -m unittest discover -s kindle_panel -p 'test_*.py'
 node kindle_panel/test_panel.js
 node kindle_panel/test_live.js
+node tests/kindle/test_native_start.js
 python3 tests/kindle/test_light_off.py
 python3 tests/kindle/test_visible_exit.py
 python3 -m unittest discover -s tests -p 'test_*.py'

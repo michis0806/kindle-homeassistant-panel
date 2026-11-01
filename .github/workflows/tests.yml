@@ -17,5 +17,6 @@ jobs:
       - run: python -m unittest discover -s kindle_panel -p 'test_*.py'
       - run: node kindle_panel/test_panel.js && node kindle_panel/test_live.js
       - run: python -m unittest discover -s tests -p 'test_*.py'
+      - run: node tests/kindle/test_native_start.js
       - run: python tests/kindle/test_light_off.py && python tests/kindle/test_visible_exit.py
       - run: for file in kindle/HAKiosk/*.sh kindle/HAKiosk/tools/*; do sh -n "$file"; done

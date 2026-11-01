@@ -7,9 +7,14 @@ APPREG=/var/local/appreg.db
 APP_ID=com.schmid.kindlekiosk
 SQLITE="$ROOT/tools/sqlite3"
 OLD_COMMAND="/usr/bin/mesquite -l $APP_ID -c $ROOT/web/"
+MIGRATION_COMMAND="/usr/bin/mesquite -l $APP_ID -c file://$ROOT/web-v3/"
 PREVIOUS_COMMAND="/usr/bin/mesquite -l $APP_ID -c file://$ROOT/web-v2/"
 RUN="-l $APP_ID -c file://$ROOT/web/"
 COMMAND="/usr/bin/mesquite $RUN"
+db() {
+    # The PW1 SQLite CLI supports .timeout, even on its old runtime.
+    printf '.timeout 5000\n%s\n' "$1" | "$SQLITE" "$APPREG"
+}
 mkdir -p "$STATE" || exit 1
 exec >> "$ROOT/kiosk.log" 2>&1
 printf '\n--- %s: %s ---\n' "$(date)" "$1"
@@ -66,20 +71,20 @@ register_native() {
         fi
     done
     [ "$MISSING" -eq 0 ] || return 1
-    EXISTING=$("$SQLITE" "$APPREG" "SELECT value FROM properties WHERE handlerId='$APP_ID' AND name='command';") || return 1
-    if [ -n "$EXISTING" ] && [ "$EXISTING" != "$COMMAND" ] && [ "$EXISTING" != "$OLD_COMMAND" ] && [ "$EXISTING" != "$PREVIOUS_COMMAND" ]; then
+    EXISTING=$(db "SELECT value FROM properties WHERE handlerId='$APP_ID' AND name='command';") || return 1
+    if [ -n "$EXISTING" ] && [ "$EXISTING" != "$COMMAND" ] && [ "$EXISTING" != "$OLD_COMMAND" ] && [ "$EXISTING" != "$PREVIOUS_COMMAND" ] && [ "$EXISTING" != "$MIGRATION_COMMAND" ]; then
         echo 'Application ID conflict; no registry change made'; return 1
     fi
     if [ ! -s "$STATE/appreg-before-kiosk.db" ]; then
-        "$SQLITE" "$APPREG" ".backup '$STATE/appreg-before-kiosk.db'" || return 1
+        db ".backup '$STATE/appreg-before-kiosk.db'" || return 1
     fi
-    "$SQLITE" "$APPREG" "BEGIN; INSERT OR IGNORE INTO handlerIds(handlerId) VALUES('$APP_ID'); DELETE FROM properties WHERE handlerId='$APP_ID' AND name IN ('command','unloadPolicy','framework','run'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','command','$COMMAND'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','unloadPolicy','unloadOnPause'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','framework',''); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','run','$RUN'); COMMIT;" || return 1
+    db "BEGIN; INSERT OR IGNORE INTO handlerIds(handlerId) VALUES('$APP_ID'); DELETE FROM properties WHERE handlerId='$APP_ID' AND name IN ('command','unloadPolicy','framework','run'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','command','$COMMAND'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','unloadPolicy','unloadOnPause'); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','framework',''); INSERT INTO properties(handlerId,name,value) VALUES('$APP_ID','run','$RUN'); COMMIT;" || return 1
     printf '1\n' > "$STATE/native-registered"
     echo 'Separate native web starter registered.'
 }
 unregister_native() {
     [ -f "$STATE/native-registered" ] || return 0
-    "$SQLITE" "$APPREG" "BEGIN; DELETE FROM properties WHERE handlerId='$APP_ID'; DELETE FROM handlerIds WHERE handlerId='$APP_ID'; COMMIT;" || return 1
+    db "BEGIN; DELETE FROM properties WHERE handlerId='$APP_ID'; DELETE FROM handlerIds WHERE handlerId='$APP_ID'; COMMIT;" || return 1
     rm -f "$STATE/native-registered"
     echo 'Separate native web starter unregistered.'
 }
@@ -88,7 +93,7 @@ capture_runtime() {
     {
         date
         echo 'Registered starter:'
-        "$SQLITE" "$APPREG" "SELECT name,value FROM properties WHERE handlerId='$APP_ID';"
+        db "SELECT name,value FROM properties WHERE handlerId='$APP_ID';"
         echo 'Runtime processes:'
         ps | grep '[m]esquite'
         echo 'Application system log:'
@@ -189,10 +194,13 @@ case "$1" in
         restore_config || exit 1
         lipc-set-prop com.lab126.appmgrd stop "$APP_ID" 2>/dev/null || true
         sleep 1
-        unregister_native || exit 1
         lipc-set-prop com.lab126.appmgrd start 'app://com.lab126.booklet.home/?context=0'
         RESULT=$?
         echo "Return to Home result: $RESULT"
+        # Optional registry cleanup must never block returning to Home.
+        if [ "$RESULT" -eq 0 ]; then
+            unregister_native || echo 'Application registry busy; registration retained for the next launch.'
+        fi
         exit "$RESULT"
         ;;
     diagnose)
