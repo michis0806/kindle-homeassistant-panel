@@ -56,6 +56,8 @@ Python 3.10+ is needed on the computer. Jailbreak and KUAL must already work. Th
 
 Home Assistant app updates do not update the USB extension; install starter updates separately on each Kindle. Starter 1.1 configures the native title/status bars before creating the content window and waits for a native acknowledgement (with a bounded fallback). Returning Home occurs before optional registry cleanup, so a busy registration database cannot prevent it.
 
+The prepared native observer can request a full PW1 display refresh every five minutes, deferred until at least five seconds after the last touch. It keeps the page and framebuffer contents; no browser reload is used. KUAL offers 1/5/15-minute intervals or off, applied on the next kiosk start (`display-refresh-seconds.txt`). This requires updating the Kindle extension over USB and is pending physical verification. The refresh command follows the [on-device eips usage reference](https://github.com/daltonbr/kindle-dashboard/blob/main/docs/recon/2026-05-25-first-ssh.md); it is specific to the tested 758×1024 PW1.
+
 The native starter backs up its application registration before modifying it. The installer backs up an existing extension locally and refuses to overwrite saved active light/power state. Native registration and frontlight paths are firmware-specific; the version guard does not prove compatibility with other models. Do not use this starter on another model without adapting and testing those paths.
 
 ## Device behavior

@@ -1,3 +1,7 @@
+# 0.10.1
+
+Mehrseitige Ansichten reservieren Platz für die Navigation, teilen große Kartengruppen erst nach der Platzberechnung auf und behalten dieselbe Größenstufe auf allen Seiten. Tabellenfreie Seitennavigation und beidseitig begrenzte Karten vermeiden seitlichen Überstand. Kompakteres Klimapanel ohne zusätzliche Betriebsart-Anzeige, mit Info-Schaltfläche oben rechts.
+
 # 0.10.0
 
 Dashboard-Aktionen werden als eigene Metadaten übersetzt. Explizites More-info öffnet eine lokale Detailansicht; Navigation innerhalb des zugewiesenen Dashboards wird übernommen. Nicht unterstützte Dienste, Bestätigungen und getrennte Icon-Aktionen werden mit Warnung gesperrt. Karten-Icons werden auch auf Licht- und Lüftertasten übernommen.

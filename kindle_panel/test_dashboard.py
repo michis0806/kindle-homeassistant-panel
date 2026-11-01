@@ -123,6 +123,7 @@ class DashboardTests(unittest.TestCase):
         cards=[{'type':'climate','entity':'climate.c','columns':12,'width_set':True},
             {'type':'climate','entity':'climate.a','columns':12,'width_set':True},
             {'type':'climate','entity':'climate.b','columns':12,'width_set':True},
+            {'type':'climate','entity':'climate.d','columns':12,'width_set':True},
             {'type':'heading','name':'Next room'},
             {'type':'entity','entity':'script.room','columns':6,'read_only':False}]
         pages=ui.dashboard_pages(cards)
@@ -151,8 +152,27 @@ class DashboardTests(unittest.TestCase):
         markup=ui.dashboard(config,{}, {'csrf':'test'},0,30)
         self.assertIn('grid-card grid-y-0 grid-n-4',markup)
         self.assertNotIn('rowspan=',markup)
+        self.assertIn('class="climate-info"',markup)
+        self.assertNotIn('class="mode-status"',markup)
+        self.assertNotIn('class="climate-more"',markup)
         self.assertNotIn('class="pager"',markup)
         self.assertEqual(ui.label(config,'fan.alcove',{'attributes':{'friendly_name':'Alcove Fan'}}),'Alcove Fan')
+
+    def test_large_grid_keeps_badges_with_cards_and_same_page_size_budget(self):
+        config=view_config({},translate({'views':[{'badges':['sensor.temp'],'cards':[
+            {'type':'tile','entity':'light.test'+str(i),'grid_options':{'columns':6}} for i in range(32)]}]}))
+        pages=ui.dashboard_layout_pages(ui.dashboard_cards(config))
+        self.assertGreater(len(pages),1)
+        self.assertTrue(any(block['kind']=='grid' for block in pages[0]))
+        import re
+        budgets=[]
+        for index in range(len(pages)):
+            markup=ui.dashboard(config,{}, {'csrf':'test'},index,30)
+            budgets.append(re.search(r'data-fit-rows="(\d+)"',markup).group(1))
+            self.assertIn('class="pagination"',markup)
+            self.assertNotIn('class="bottom-table"',markup)
+            self.assertNotIn('%;width:',markup)
+        self.assertEqual(len(set(budgets)),1)
 
     def test_ha_editor_script_actions_start_only_the_same_script_without_arguments(self):
         for action in ({'action':'perform-action','perform_action':'script.room','target':{}},

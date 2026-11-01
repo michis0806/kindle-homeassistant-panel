@@ -12,7 +12,7 @@ KINDS = {'light':'Licht', 'switch':'Schalter', 'input_boolean':'Schalter', 'scen
 CSS = '''
 *{-webkit-box-sizing:border-box;box-sizing:border-box}
 body{margin:22px;background:#fff;color:#111;font:20px Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%}
-html{width:100%;height:100%}body.kindle{width:100%;min-height:100%;padding:0;overflow-x:hidden}.kindle>.panel{width:100%;max-width:none;min-height:100%}
+html{width:100%;height:100%;overflow-x:hidden}body.kindle{width:100%;min-height:100%;padding:0;overflow-x:hidden}.kindle>.panel{width:100%;max-width:100%;min-height:100%;overflow:hidden}
 a{color:inherit}h1{font:normal 34px Georgia,serif;margin:0 0 16px}h2{font-size:23px}p{line-height:1.45}
 button,input,select{font:inherit;color:#111;background:#fff;border:1px solid #777;border-radius:0;padding:12px}
 button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:block;margin:18px 0}select{max-width:100%;width:100%}
@@ -80,9 +80,9 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
 
-.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
+.pagination{height:48px;white-space:nowrap;text-align:center;margin-top:4px;overflow:hidden}.pagination .pager{font-size:15px;padding:8px 12px;margin:0;vertical-align:middle}.pagination .pager[aria-disabled]{color:#aaa;border-color:#ccc}.page-count{display:inline-block;min-width:64px;text-align:center;font-size:14px;vertical-align:middle}.live-line{font-size:12px;line-height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.climate-heading{position:relative;padding-right:30px}.climate-info{position:absolute;right:0;top:0;width:28px;height:28px;text-align:center;font:24px/28px Arial,sans-serif;text-decoration:none}.four-grid{position:relative;width:100%}.grid-card{position:absolute;overflow:hidden}.tile-cell{display:block}.dashboard-grid{padding:2px}
 .dashboard .masthead{padding:6px 8px}.dashboard .title-row h1{font-size:23px}.dashboard .exit-button{height:44px;width:46px;padding:6px}.dashboard .exit-button svg{height:28px;width:28px}
-.dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:40px}.dashboard .climate-panel .current{font-size:15px}
+.dashboard .climate-panel{height:200px;padding:8px}.dashboard .climate-panel h2{font-size:20px;line-height:24px}.dashboard .climate-panel .mode-status{font-size:15px}.dashboard .climate-panel .target{font-size:36px}.dashboard .climate-panel .current{font-size:15px}
 .dashboard .climate-panel .temperature-table{table-layout:fixed;margin:4px 0}.dashboard .climate-panel .temperature-table .step{width:50px}.dashboard .climate-panel .temperature-table button{width:44px;height:48px;font-size:28px}
 .dashboard .mode-button{height:40px;padding:6px 0}.dashboard .mode-button svg{height:24px;width:24px}.dashboard .climate-more{font-size:12px;margin-top:4px}
 .dashboard .cover-inner{height:96px;padding:6px}.dashboard .cover-label{height:20px;font-size:15px;line-height:20px;white-space:nowrap;text-overflow:ellipsis}.cover-state{display:block;height:14px;font-size:12px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#555}.dashboard .cover-arrows{margin-top:4px}.dashboard .cover-arrows td{padding:0 2px}.dashboard .cover-arrows button{height:40px;font-size:26px;line-height:36px}
@@ -260,7 +260,7 @@ def compact_span(card):
 def card_units(card):
     domain=card.get('entity','').split('.')[0]
     linked=card.get('actions',{}).get('tap',{}).get('kind') in {'more-info','navigate','url'}
-    minimum=1 if linked and domain not in {'cover','climate'} else 4 if domain=='climate' else 1 if domain in {'light','fan','script'} and not card.get('read_only') else 3 if domain in {'switch','input_boolean','scene'} and not card.get('read_only') else 2
+    minimum=1 if linked and domain not in {'cover','climate'} else 3 if domain=='climate' else 1 if domain in {'light','fan','script'} and not card.get('read_only') else 3 if domain in {'switch','input_boolean','scene'} and not card.get('read_only') else 2
     rows=card.get('rows')
     return max(minimum,min(12,rows)) if isinstance(rows,int) and not isinstance(rows,bool) else minimum
 
@@ -301,21 +301,27 @@ def layout_blocks(selected):
 
 def dashboard_layout_pages(selected):
     blocks=layout_blocks(selected);pages=[];page=[];height=0
+    # Multipage views reserve room for the navigation before laying out cards.
+    budget=620 if sum(block['height'] for block in blocks)<=620 else 520
     for index,block in enumerate(blocks):
         reserve=blocks[index+1]['height'] if block['kind']=='heading' and index+1<len(blocks) else 0
-        if page and height+block['height']+reserve>620:
+        if page and height+block['height']+reserve>budget and not (block['kind']=='grid' and block['height']>budget):
             pages.append(page);page=[];height=0
         # Split large sections on complete visual row boundaries. Cards spanning
         # several rows remain together so their controls are never cut apart.
-        if block['kind']=='grid' and block['height']>620:
+        if block['kind']=='grid' and block['height']>budget:
             boundaries=[row for row in range(1,block['rows']+1) if not any(p['row']<row<p['row']+p['units'] for p in block['placements'])]
             start_row=0
             while start_row<block['rows']:
-                candidates=[row for row in boundaries if start_row<row<=start_row+11]
+                capacity=max(0,(budget-height)//GRID_UNIT)
+                candidates=[row for row in boundaries if start_row<row<=start_row+capacity]
+                if not candidates and page:
+                    pages.append(page);page=[];height=0
+                    candidates=[row for row in boundaries if start_row<row<=start_row+budget//GRID_UNIT]
                 end=max(candidates) if candidates else next(row for row in boundaries if row>start_row)
                 chosen=[dict(p,row=p['row']-start_row) for p in block['placements'] if start_row<=p['row']<end]
                 part=dict(block,placements=chosen,cards=[p['card'] for p in chosen],rows=end-start_row,height=(end-start_row)*GRID_UNIT)
-                if page and height+part['height']>620:pages.append(page);page=[];height=0
+                if page and height+part['height']>budget:pages.append(page);page=[];height=0
                 page.append(part);height+=part['height'];start_row=end
                 if start_row<block['rows']:pages.append(page);page=[];height=0
         else:page.append(block);height+=block['height']
@@ -338,7 +344,7 @@ def layout_css(blocks):
             rule('.grid-h-'+str(row),{'height':px(row*unit)})
             if row:
                 for selector in ('.climate-panel','.cover-inner','.light-button','.tile-inner'):
-                    rule('.grid-n-'+str(row)+' '+selector,{'height':px(row*unit-8)})
+                    rule('.grid-n-'+str(row)+' '+selector,{'height':px((min(row,3) if selector=='.climate-panel' else row)*unit-8)})
         if unit==52:continue
         big=unit==80;middle=unit==68
         font=18 if big else 17 if middle else 16
@@ -385,7 +391,7 @@ def layout_css(blocks):
 def render_grid(config,block,states,device,page_index):
     body='<div class="four-grid grid-h-'+str(block['rows'])+'">'
     for p in block['placements']:
-        body+='<div class="grid-card grid-y-'+str(p['row'])+' grid-n-'+str(p['units'])+'" style="left:'+str(p['column']*25)+'%;width:'+str(p['span']*25)+'%">'+tile(config,p['card'],states,device,page_index,cell=True)+'</div>'
+        body+='<div class="grid-card grid-y-'+str(p['row'])+' grid-n-'+str(p['units'])+'" style="left:'+str(p['column']*25)+'%;right:'+str((4-p['column']-p['span'])*25)+'%">'+tile(config,p['card'],states,device,page_index,cell=True)+'</div>'
     return body+'</div>'
 
 def entity_icon(config,entity,item):
@@ -511,8 +517,9 @@ def dashboard(config,states,device,page_index,refresh):
     view=config.get('dashboard_view',{});view_path=view.get('path');title=view.get('title','Zuhause')
     query=lambda index:'?'+urlencode(dict({'seite':index},**({'view':view_path} if view_path else {})))
     rows=sum(block.get('rows',0) for block in groups[page_index])
+    fit_rows=max(sum(block.get('rows',0) if block['kind']=='grid' else math.ceil(block['height']/GRID_UNIT) for block in group) for group in groups)
     display_class='panel dashboard layout-u52'
-    body='<div class="'+display_class+'" id="dashboard-root" data-grid-rows="'+str(rows)+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
+    body='<div class="'+display_class+'" id="dashboard-root" data-grid-rows="'+str(rows)+'" data-fit-rows="'+str(fit_rows)+'" data-layout-preferred="'+str(config.get('preferred_layout_unit',0))+'" data-revision="'+esc(config.get('dashboard_revision',''))+'">'+masthead(title,query(page_index),device=device)
     views=config.get('dashboard_views',[])
     if len(views)>1:
         body+='<nav class="view-tabs">'
@@ -528,16 +535,20 @@ def dashboard(config,states,device,page_index,refresh):
             body+='<div class="tile-heading-card">'+esc(block['cards'][0]['name'])+'</div>'
         else:body+=render_grid(config,block,states,device,page_index)
     body+='</div>'
-    body+='<footer class="bottom"><table class="bottom-table"><tr><td>'+live_footer()+'</td><td class="right">'
+    body+='<footer class="bottom"><div class="live-line">'+live_footer()+'</div>'
     if pages>1:
-        body+=str(page_index+1)+' / '+str(pages)
-        if page_index:body+='<a class="pager" href="'+query(page_index-1)+'">Zurück</a>'
-        if page_index+1<pages:body+='<a class="pager" href="'+query(page_index+1)+'">Weiter</a>'
-    return body+'</td></tr></table></footer></div><script src="/layout.js"></script><script src="/panel.js"></script>'
+        body+='<nav class="pagination" aria-label="Dashboard-Seiten">'
+        body+='<a class="pager"'+(' href="'+query(page_index-1)+'"' if page_index else ' aria-disabled="true"')+'>Zurück</a>'
+        body+='<span class="page-count">'+str(page_index+1)+' / '+str(pages)+'</span>'
+        body+='<a class="pager"'+(' href="'+query(page_index+1)+'"' if page_index+1<pages else ' aria-disabled="true"')+'>Weiter</a></nav>'
+    return body+'</footer></div><script src="/layout.js"></script><script src="/panel.js"></script>'
 
 def climate_panel(config,entity,item,device,more=False):
     attrs=item.get('attributes',{});unit=attrs.get('temperature_unit','');state=item['state'];available=state not in {'unknown','unavailable'} and not config.get('read_only',{}).get(entity,False)
-    body='<div class="climate-panel"><h2>'+entity_caption(config,entity,item)+'</h2><div class="mode-status" id="'+bid(entity,'state')+'">'+display_state('climate',state,attrs)+'</div>'
+    body='<div class="climate-panel"><div class="climate-heading">'
+    if more:body+='<a class="climate-info" href="?'+esc(urlencode(dict({'klima':entity},**({'view':config['dashboard_view']['path']} if config.get('dashboard_view',{}).get('path') else {}))))+'" aria-label="Weitere Klimaeinstellungen" title="Weitere Klimaeinstellungen">ⓘ</a>'
+    body+='<h2>'+entity_caption(config,entity,item)+'</h2></div>'
+    if not more:body+='<div class="mode-status" id="'+bid(entity,'state')+'">'+display_state('climate',state,attrs)+'</div>'
     if int(attrs.get('supported_features',0))&1:
         steps=climate_steps(item)
         body+='<table class="temperature-table"><tr>'
@@ -556,8 +567,6 @@ def climate_panel(config,entity,item,device,more=False):
         for mode in modes:
             body+='<td><form method="post" action="action">'+hidden(device,entity,'climate_hvac')+'<button id="'+bid(entity,'mode-'+mode)+'" class="mode-button'+(' active' if state==mode else '')+'" name="value" value="'+mode+'" title="'+esc(MODES[mode])+'" aria-label="'+esc(MODES[mode])+'"'+(' disabled' if not available else '')+'>'+MODE_ICONS[mode]+'</button></form></td>'
         body+='</tr></table>'
-    if more:
-        body+='<a class="climate-more" href="?klima='+esc(entity)+'">Weitere Einstellungen ›</a>'
     return body+'</div>'
 
 def climate(config,entity,item,device):

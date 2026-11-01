@@ -150,6 +150,7 @@ if [ -n "$CONTROLLER" ]; then
 fi
 BASE=$(cat "$STATE/exit-generation") || exit 1
 case "$BASE" in ''|*[!0-9]*) echo 'Invalid baseline exit status'; exit 1;; esac
+[ ! -r "$ROOT/display-refresh.sh" ] || { . "$ROOT/display-refresh.sh"; display_refresh_init "$START"; }
 NEXT_POLL=0
 LEVEL=
 while :; do
@@ -169,6 +170,7 @@ while :; do
     fi
     LAST=$(cat "$WORK/last-touch")
     case "$LAST" in ''|*[!0-9]*) echo 'Invalid activity time'; exit 1;; esac
+    if command -v display_refresh_tick >/dev/null 2>&1; then display_refresh_tick "$NOW" "$LAST" || :; fi
     TARGET=$BRIGHT_LEVEL
     if [ $((NOW - LAST)) -ge "$IDLE_SECONDS" ]; then TARGET=$DIM_LEVEL; fi
     if [ "$LEVEL" != "$TARGET" ]; then

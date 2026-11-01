@@ -198,7 +198,7 @@ class App:
             try:values=json.loads(raw)
             except (ValueError,TypeError):return
             if not isinstance(values,dict):return
-            fields={'inner_w','inner_h','doc_w','doc_h','screen_w','screen_h','dpr','button_h','unit','rows','fixed_h'}
+            fields={'inner_w','inner_h','doc_w','doc_h','screen_w','screen_h','dpr','button_h','unit','rows','fixed_h','root_w','scroll_w','scroll_h'}
             report={k:v for k,v in values.items() if k in fields and isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) and 0<=v<=10000}
             if not report:return
         key=digest(token)
