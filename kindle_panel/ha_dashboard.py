@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import time
 
 PATH = 'kindle-panel'
 DOMAINS = {'sensor','binary_sensor','climate','light','switch','input_boolean','scene','weather'}
@@ -46,7 +47,7 @@ def valid_entity(value):
 
 def default_columns(entity):
     domain=entity.split('.')[0]
-    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor'} else 6
+    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor','light'} else 6
 
 
 def seed(config):
@@ -75,7 +76,8 @@ def ensure_dashboard(config, call=commands):
     return call([{'type':'lovelace/config','url_path':PATH}])[0]
 
 
-def translate(raw):
+def translate(raw, display=None):
+    display=display or {}
     if not isinstance(raw,dict) or not isinstance(raw.get('views'),list):
         raise ValueError('Dashboard has no views')
     warnings=[]; views=[]; all_entities=[]; controls=[]
@@ -121,7 +123,7 @@ def translate(raw):
                 except (TypeError,ValueError):columns=default_columns(entity)
                 if entity.startswith('climate.') and columns<6:
                     columns=6;warn('Klimapanels benötigen mindestens halbe Breite.')
-                if entity.split('.')[0] in CONTROLS and not entity.startswith('climate.') and columns<6:
+                if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.')) and columns<6:
                     columns=6;warn('Bedienbare Kacheln benötigen mindestens halbe Breite.')
                 action=card.get('tap_action',{}).get('action') if isinstance(card.get('tap_action',{}),dict) else None
                 read_only=action=='none'
@@ -163,12 +165,15 @@ def translate(raw):
             if badge.get('state_content','state') not in ('state',['state']):
                 warn('Badge-Attribute werden noch nicht übersetzt: '+badge['entity']);continue
             normalized=dict(badge,type='entity',tap_action={'action':'none'},grid_options={'columns':3})
-            badges.extend(parse_cards([normalized]))
+            for parsed in parse_cards([normalized]):
+                parsed.update(type='badge',show_icon=badge.get('show_icon',True),show_state=badge.get('show_state',True))
+                badges.append(parsed)
         if badges:groups.insert(0,{'title':'','cards':badges})
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
-    revision=hashlib.sha256(json.dumps(raw,sort_keys=True).encode()).hexdigest()
-    return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision}
+    selected_display={entity:display[entity] for entity in all_entities if entity in display}
+    revision=hashlib.sha256(json.dumps([raw,selected_display,'compact-controls-1'],sort_keys=True).encode()).hexdigest()
+    return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display}
 
 
 def view_config(base, model, path=None):
@@ -177,7 +182,8 @@ def view_config(base, model, path=None):
     cards=[card for group in view['groups'] for card in group['cards']]
     result.update(entities=[c['entity'] for c in cards if 'entity' in c],
         labels={c['entity']:c['name'] for c in cards if c.get('name')},
-        icons={c['entity']:c['icon'] for c in cards if c.get('icon')},
+        icons={c['entity']:c.get('icon') or model.get('display',{}).get(c['entity'],{}).get('icon') for c in cards if 'entity' in c},
+        display_precision={entity:entry['precision'] for entity,entry in model.get('display',{}).items() if 'precision' in entry},
         columns={c['entity']:c['columns'] for c in cards if 'entity' in c},
         read_only={c['entity']:c['read_only'] for c in cards if 'entity' in c},
         dashboard_view=view,dashboard_views=[{'path':v['path'],'title':v['title']} for v in model['views']],
@@ -188,18 +194,32 @@ class Source:
     """Cached dashboard models; never writes user dashboards after initial creation."""
     def __init__(self, call=commands):
         import threading
-        self.call=call;self.lock=threading.RLock();self.models={};self.errors={};self.dashboards=[]
+        self.call=call;self.lock=threading.RLock();self.models={};self.errors={};self.dashboards=[];self.display={};self.display_checked=None
 
     def refresh(self, seed_config, paths, bootstrap=False):
         listing=self.call([{'type':'lovelace/dashboards/list'}])[0]
         if bootstrap and not any(d.get('url_path')==PATH for d in listing):
             ensure_dashboard(seed_config,self.call)
             listing=self.call([{'type':'lovelace/dashboards/list'}])[0]
-        with self.lock:self.dashboards=copy.deepcopy(listing)
+        if self.display_checked is None or time.monotonic()-self.display_checked>30:
+            try:
+                registry=self.call([{'type':'config/entity_registry/list_for_display'}])[0]
+                display={}
+                for entry in registry.get('entities',[]):
+                    entity=entry.get('ei')
+                    if not valid_entity(entity):continue
+                    info={};precision=entry.get('dp');icon=entry.get('ic')
+                    if isinstance(precision,int) and not isinstance(precision,bool) and 0<=precision<=20:info['precision']=precision
+                    if isinstance(icon,str) and re.fullmatch(r'mdi:[a-z0-9-]+',icon):info['icon']=icon
+                    if info:display[entity]=info
+                with self.lock:self.display=display;self.display_checked=time.monotonic();self.errors.pop('entity_display',None)
+            except Exception:
+                with self.lock:self.errors['entity_display']='Anzeigeeinstellungen vorübergehend nicht erreichbar'
+        with self.lock:self.dashboards=copy.deepcopy(listing);display=copy.deepcopy(self.display)
         for path in paths:
             try:
                 raw=self.call([{'type':'lovelace/config','url_path':path}])[0]
-                model=translate(raw)
+                model=translate(raw,display)
                 with self.lock:self.models[path]=model;self.errors.pop(path,None)
             except Exception as error:
                 with self.lock:

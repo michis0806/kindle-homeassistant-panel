@@ -5,7 +5,7 @@ function textNode(value) {
     return {nodeType:3, get nodeValue(){return stored;}, set nodeValue(v){stored=v;mutations++;}};
 }
 function node(tag,id,value) {
-    return {tagName:tag.toUpperCase(),id,children:[],className:'',value:value||'',disabled:false,
+    return {attributes:{},getAttribute(name){return this.attributes[name]||null;},setAttribute(name,value){this.attributes[name]=value;mutations++;},tagName:tag.toUpperCase(),id,children:[],className:'',value:value||'',disabled:false,
         get childNodes(){return this.children;},get firstChild(){return this.children[0];},
         appendChild(n){this.children.push(n);mutations++;},removeChild(n){this.children.splice(this.children.indexOf(n),1);mutations++;}};
 }
@@ -24,7 +24,9 @@ function form(button,action,extra){
     const f={elements:fields,getAttribute(){return 'action';}};button.form=f;return f;
 }
 const tempForm=form(plus,'climate_temperature'), modeForm=form(apply,'climate_hvac',select), directModeForm=form(modeButton,'climate_hvac');
-const document={forms:[tempForm,modeForm,directModeForm],activeElement:null,getElementById(id){return nodes[id]||null;},
+const light=add('button','e-light-test-toggle','turn_on');light.name='action';light.className='light-button is-off';light.attributes['aria-pressed']='false';
+const lightForm=form(light,'turn_on');lightForm.elements=lightForm.elements.filter(c=>c.name!=='action'||c===light);lightForm.elements.find(c=>c.name==='entity').value='light.test';
+const document={forms:[tempForm,modeForm,directModeForm,lightForm],activeElement:null,getElementById(id){return nodes[id]||null;},
     createElement(tag){return node(tag,'');},createTextNode:textNode,
     addEventListener(name,fn){handlers[name]=fn;}};
 const context={document,window:{},JSON,Number,String,
@@ -64,4 +66,12 @@ assert(!apply.disabled);assert.equal(select._dirty,false);assert.equal(status.fi
 next(2000);respond('GET',503,{error:'upstream_unavailable'});assert(plus.disabled);assert(status.firstChild.nodeValue.includes('veraltet'));
 next(5000);respond('GET',200,snapshot(25,'cool'));assert(!plus.disabled);
 submit(tempForm,plus);respond('POST',400,{error:'invalid_action'});assert(!plus.disabled);assert(status.firstChild.nodeValue.includes('Aktion nicht möglich'));
+function lightSnapshot(state){const data=snapshot(25,'cool');data.entities['light.test']={state};data.patches.push({id:light.id,disabled:false,value:state==='on'?'turn_off':'turn_on',className:'light-button is-'+state,pressed:state==='on'});return data;}
+next(2000);respond('GET',200,lightSnapshot('off'));
+const unchanged=mutations;next(2000);respond('GET',200,lightSnapshot('off'));assert.equal(mutations,unchanged,'Unchanged light must not repaint');
+submit(lightForm,light);assert(light.disabled);const lightPost=respond('POST',202,{accepted:true});assert(lightPost.body.includes('action=turn_on'));
+assert.equal(light.className,'light-button is-off','No optimistic light icon change');
+next(0);respond('GET',200,lightSnapshot('off'));assert(light.disabled,'Wait for confirmed light state');
+next(2000);respond('GET',200,lightSnapshot('on'));assert(!light.disabled);assert.equal(light.value,'turn_off');assert.equal(light.className,'light-button is-on');assert.equal(light.getAttribute('aria-pressed'),'true');
+submit(lightForm,light);assert(respond('POST',202,{accepted:true}).body.includes('action=turn_off'));next(0);respond('GET',200,lightSnapshot('off'));assert.equal(light.getAttribute('aria-pressed'),'false');
 console.log('Panel tests passed: no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');

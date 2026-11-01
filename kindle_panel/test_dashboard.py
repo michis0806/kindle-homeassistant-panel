@@ -1,5 +1,6 @@
 import unittest
-from ha_dashboard import translate,view_config,seed,ensure_dashboard,PATH
+from ha_dashboard import translate,view_config,seed,ensure_dashboard,PATH,Source
+import ui
 
 class DashboardTests(unittest.TestCase):
     def test_sections_names_widths_and_room_views(self):
@@ -62,6 +63,39 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(model['control_entities'],['light.room'])
         self.assertEqual(len(config['entities']),len(set(config['entities'])))
         self.assertTrue(model['warnings'])
+
+    def test_display_precision_and_registry_icon_are_used_in_badges_and_live_patches(self):
+        raw={'views':[{'badges':[{'type':'entity','entity':'sensor.temp'},'sensor.humidity'],'cards':[]}]}
+        model=translate(raw,{'sensor.temp':{'precision':1,'icon':'mdi:thermometer-lines'},'sensor.humidity':{'precision':0}})
+        config=view_config({},model)
+        states={'sensor.temp':{'state':'21','attributes':{'unit_of_measurement':'°C'}},
+            'sensor.humidity':{'state':'48.5','attributes':{'unit_of_measurement':'%'}}}
+        markup=ui.dashboard(config,states,{'csrf':'test'},0,30)
+        self.assertIn('id="e-sensor-temp-value">21,0</span>',markup)
+        self.assertIn('id="e-sensor-humidity-value">49</span>',markup)
+        self.assertIn('badge-pill',markup)
+        self.assertNotIn('tile-label',markup)
+        self.assertIn(ui.ICONS['mdi:thermometer-lines'],markup)
+        patches=ui.updates(config,states)['patches']
+        self.assertEqual(next(p['text'] for p in patches if p['id']=='e-sensor-temp-value'),'21,0')
+        self.assertEqual(ui.sensor_number(config,'sensor.humidity','-1.5'),'-2')
+        self.assertEqual(ui.sensor_number(config,'sensor.temp','0'),'0,0')
+        self.assertEqual(ui.sensor_number(config,'sensor.temp','unavailable'),'unavailable')
+        self.assertNotEqual(model['revision'],translate(raw,{'sensor.temp':{'precision':2}})['revision'])
+
+    def test_source_reads_home_assistant_display_metadata(self):
+        def call(requests):
+            kind=requests[0]['type']
+            if kind=='lovelace/dashboards/list':return [[{'url_path':PATH}]]
+            if kind=='config/entity_registry/list_for_display':return [{'entities':[
+                {'ei':'sensor.temp','dp':1,'ic':'mdi:thermometer'},
+                {'ei':'sensor.private','dp':2,'ic':'mdi:home'}]}]
+            if kind=='lovelace/config':return [{'views':[{'badges':['sensor.temp'],'cards':[]}]}]
+            raise AssertionError(kind)
+        source=Source(call);source.refresh({},[PATH])
+        model=source.model(PATH)
+        self.assertEqual(model['display'],{'sensor.temp':{'precision':1,'icon':'mdi:thermometer'}})
+        self.assertEqual(source.status()['errors'],{})
 
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]

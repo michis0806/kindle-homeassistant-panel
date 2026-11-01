@@ -37,6 +37,7 @@
             var disabled = item.disabled || (node.tagName.toLowerCase() === 'button' && (!online || !!pending));
             if (node.disabled !== disabled) { node.disabled = disabled; }
         }
+        if (typeof item.pressed !== 'undefined' && node.getAttribute('aria-pressed') !== String(item.pressed)) { node.setAttribute('aria-pressed', String(item.pressed)); }
         if (typeof item.className !== 'undefined' && node.className !== item.className) { node.className = item.className; }
         if (item.options && !node._dirty && document.activeElement !== node) {
             key = JSON.stringify(item.options);

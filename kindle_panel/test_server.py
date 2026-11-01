@@ -234,8 +234,8 @@ class PanelTests(unittest.TestCase):
         token,_=self.pair();headers={'Cookie':COOKIE+'='+token}
         body=self.request(self.public,headers=headers)[2]
         self.assertIn('id="e-climate-test-plus"',body)
-        self.assertIn('id="e-light-test-on"',body)
-        self.assertEqual(body.count('style="width:25.00000%"'),4)
+        self.assertIn('id="e-light-test-toggle"',body)
+        self.assertEqual(body.count('style="width:25.00000%"'),5)
         self.assertIn('style="width:100.00000%"',body)
         self.assertNotIn('colspan=',body)
 
@@ -294,8 +294,8 @@ class PanelTests(unittest.TestCase):
         self.app.dashboard_source=Source()
         status,_,body=self.request(self.public,headers=headers)
         self.assertEqual(status,200)
-        self.assertIn('id="e-sensor-test-value">21</div>',body)
-        self.assertIn('id="e-sensor-humidity-value">48</div>',body)
+        self.assertIn('id="e-sensor-test-value">21</span>',body)
+        self.assertIn('id="e-sensor-humidity-value">48</span>',body)
         self.assertIn('id="e-sensor-humidity-unit">%</span>',body)
         self.states['sensor.humidity']['state']='51'
         self.states['sensor.test']['state']='22.5'
@@ -304,6 +304,26 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(data['entities']['sensor.test']['state'],'22.5')
         self.assertNotIn('light.test',data['entities'])
         self.assertEqual(self.calls,[])
+
+    def test_light_is_one_compact_button_with_confirmed_next_action(self):
+        token,device=self.pair();headers={'Cookie':COOKIE+'='+token}
+        body=self.request(self.public,headers=headers)[2]
+        self.assertIn('id="e-light-test-toggle" class="light-button is-off"',body)
+        self.assertIn('name="action" value="turn_on" aria-pressed="false"',body)
+        self.assertNotIn('id="e-light-test-on"',body)
+        self.assertNotIn('id="e-light-test-off"',body)
+        status,_,_=self.request(self.public,'POST','/action.json',{'csrf':device['csrf'],'entity':'light.test','action':'turn_on'},headers)
+        self.assertEqual(status,202)
+        self.assertEqual(self.calls,[('services/light/turn_on',{'entity_id':'light.test'})])
+        self.states['light.test']['state']='on';self.app.panel_cache=None
+        patches=json.loads(self.request(self.public,path='/updates.json',headers=headers)[2])['patches']
+        button=next(p for p in patches if p['id']=='e-light-test-toggle')
+        self.assertEqual(button['className'],'light-button is-on')
+        self.assertEqual(button['value'],'turn_off');self.assertTrue(button['pressed'])
+        self.states['light.test']['state']='unavailable';self.app.panel_cache=None
+        patches=json.loads(self.request(self.public,path='/updates.json',headers=headers)[2])['patches']
+        button=next(p for p in patches if p['id']=='e-light-test-toggle')
+        self.assertTrue(button['disabled']);self.assertEqual(button['className'],'light-button is-unavailable')
 
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32
@@ -321,7 +341,7 @@ class PanelTests(unittest.TestCase):
         status,_,body=self.request(self.admin,path='/admin/preview?device='+digest(token),headers={'X-Remote-User-Id':'admin'})
         self.assertEqual(status,200)
         self.assertNotIn('<form',body);self.assertNotIn('panel.js',body)
-        self.assertIn('e-light-test-on',body)
+        self.assertIn('e-light-test-toggle',body)
         self.assertEqual(self.calls,[])
         self.assertEqual(self.request(self.public,path='/admin/preview')[0],404)
 

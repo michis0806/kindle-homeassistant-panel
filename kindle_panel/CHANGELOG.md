@@ -1,3 +1,9 @@
+# 0.7.2
+
+Schmale Badges mit HA-Icon, Wert und Einheit; Anzeigepräzision aus der Home-Assistant-Entitätsregistrierung wird einschließlich nachgestellter Nullen übernommen. Vollständiger MDI-Iconsatz.
+
+Lichter als kompakte einzelne Taste mit Name und Glühbirne: ausgefüllt bei An, durchgestrichen bei Aus. Symbol und nächste Schaltaktion folgen dem bestätigten Home-Assistant-Zustand. Nicht verfügbare Lichter bleiben gesperrt. Standardbreite ein Viertel; explizite Dashboardbreiten bleiben erhalten.
+
 # 0.7.1
 
 Entity-Badges einer Ansicht werden als kompakte Statuskacheln oberhalb der Panels übernommen und live aktualisiert. Unterstützt Temperatur, Luftfeuchtigkeit und binäre Zustände. Bedingte oder benutzerdefinierte Badges werden mit Hinweis ausgelassen. Bereits als Karte vorhandene Entitäten werden nicht doppelt angezeigt.

@@ -4,7 +4,7 @@ import math
 import re
 from urllib.parse import urlencode
 from icons import ICONS
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 import time
 
 MODES = {'off':'Aus', 'heat':'Heizen', 'cool':'Kühlen', 'heat_cool':'Heizen / Kühlen', 'fan_only':'Nur Lüften', 'dry':'Entfeuchten', 'auto':'Automatisch'}
@@ -68,6 +68,12 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .tile-control{height:136px}.tile-control .tile-label{font-size:17px;line-height:19px;height:38px}.tile-control .tile-heading{height:38px}
 .tile-control .tile-status{height:27px;margin:4px 0 5px}.tile-control .segment button{padding:8px 0;font-size:17px}
 .tile-active{border-color:#111}.tile-unavailable{color:#777}.tile .climate-panel{border-radius:10px}
+.badge-pill{display:inline-block;max-width:100%;height:44px;border:1px solid #aaa;border-radius:24px;padding:8px 11px;white-space:nowrap;overflow:hidden;vertical-align:top;font:18px/26px Arial,sans-serif}
+.badge-icon{display:inline-block;width:24px;height:26px;vertical-align:top;margin-right:7px}.badge-icon svg{width:24px;height:24px;vertical-align:middle}.badge-unit{margin-left:4px}.badge-value{vertical-align:top}
+.light-form{margin:0}.light-button{display:block;width:100%;height:72px;padding:12px 10px;border:1px solid #aaa;border-radius:10px;text-align:left;background:#fff;color:#111;overflow:hidden}
+.light-button.is-on{border-color:#111}.light-button:disabled{color:#999;border-color:#aaa}.light-button-icon{float:left;width:30px;height:40px;margin-right:8px;line-height:40px;text-align:center}
+.light-button svg{width:28px;height:28px;vertical-align:middle}.light-button.is-on .light-slash{display:none}.light-button-label{display:block;height:40px;overflow:hidden;font:14px/40px Arial,sans-serif;white-space:nowrap;text-overflow:ellipsis}
+.light-unknown{display:none}.light-button.is-unavailable svg{display:none}.light-button.is-unavailable .light-unknown{display:inline}
 .tile-heading-card{font:normal 21px Arial,sans-serif;padding:5px 4px 0;line-height:28px}
 .view-tabs{padding:6px 8px 0}.view-tab{display:inline-block;padding:9px 12px;margin:0 5px 4px 0;border:1px solid #777;border-radius:7px;text-decoration:none;font-size:16px}.view-tab.active{background:#111;color:#fff}
 @media(max-width:620px){.dashboard .title-row h1{font-size:25px}.tile-inner{padding:9px}.tile-label{font-size:13px}.tile-reading{font-size:26px}.tile-control .tile-label{font-size:16px}}
@@ -86,6 +92,20 @@ def number(value):
         return format(decimal.normalize(),'f').replace('.',',')
     except InvalidOperation:
         return esc(value)
+
+def sensor_number(config,entity,value):
+    precision=config.get('display_precision',{}).get(entity)
+    if isinstance(precision,int) and not isinstance(precision,bool) and 0<=precision<=20:
+        try:
+            decimal=Decimal(str(value))
+            if decimal.is_finite():
+                with localcontext() as context:
+                    context.prec=max(40,len(decimal.as_tuple().digits)+max(0,decimal.adjusted())+precision+2)
+                    rounded=decimal.quantize(Decimal(1).scaleb(-precision),rounding=ROUND_HALF_UP)
+                if rounded==0:rounded=abs(rounded)
+                return format(rounded,'f').replace('.',',')
+        except (InvalidOperation,ValueError):pass
+    return number(value)
 
 def label(config, entity, item):
     custom=config.get('labels',{}).get(entity)
@@ -163,11 +183,16 @@ def updates(config,states):
         plain=lambda value: html.unescape(str(value))
         patch(entity,'label',text=label(config,entity,item))
         patch(entity,'state',text=plain(display_state(domain,state,attrs)))
+        if domain=='light':
+            patch(entity,'toggle',value='turn_off' if state=='on' else 'turn_on',
+                disabled=not writable or state not in {'on','off'},
+                className='light-button '+('is-'+state if state in {'on','off'} else 'is-unavailable'),
+                pressed=state=='on')
         for action in ('on','off','activate'):
             active=action==state
             patch(entity,action,disabled=not writable,className='active' if active else '')
         if domain=='sensor':
-            patch(entity,'value',text=plain(number(state) if available else display_state(domain,state,attrs)))
+            patch(entity,'value',text=plain(sensor_number(config,entity,state) if available else display_state(domain,state,attrs)))
             patch(entity,'unit',text=str(attrs.get('unit_of_measurement','')) if available else '')
         if domain=='climate':
             for mode in MODE_ORDER:
@@ -191,7 +216,7 @@ def live_footer():
 
 def default_columns(entity):
     domain=entity.split('.')[0]
-    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor'} else 6
+    return 12 if domain=='climate' else 3 if domain in {'sensor','binary_sensor','light'} else 6
 
 def dashboard_cards(config):
     if config.get('dashboard_view'):
@@ -211,9 +236,13 @@ def dashboard_pages(selected):
     pages=[];current=[];height=0;row_width=0;row_height=0
     def card_height(card):
         if card['type']=='heading':return 38
+        if card['type']=='badge':return 52
         if card['type']=='climate':return 270 if card_columns(card)<12 else 258
+        if card.get('entity','').startswith('light.') and not card.get('read_only'):return 80
         return 144 if card.get('entity','').split('.')[0] in {'light','switch','input_boolean','scene'} else 124
     for card in cards:
+        if current and current[-1]['type']=='badge' and card['type']!='badge' and row_width:
+            height+=row_height;row_width=0;row_height=0
         width=card_columns(card);cost=card_height(card)
         if row_width and row_width+width>12:
             height+=row_height;row_width=0;row_height=0
@@ -235,18 +264,41 @@ def entity_icon(config,entity,item):
     paths=ICONS.get(name,ICONS['mdi:'+default])
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'+paths+'</svg>'
 
+def badge_tile(config,card,entity,item):
+    state=item['state'];attrs=item.get('attributes',{});domain=entity.split('.')[0]
+    available=state not in {'unknown','unavailable'}
+    body='<div class="badge-pill" title="'+esc(label(config,entity,item))+'">'
+    if card.get('show_icon',True):body+='<span class="badge-icon">'+entity_icon(config,entity,item)+'</span>'
+    if card.get('show_state',True):
+        if domain=='sensor':
+            body+='<span class="badge-value" id="'+bid(entity,'value')+'">'+(sensor_number(config,entity,state) if available else display_state(domain,state,attrs))+'</span><span class="badge-unit" id="'+bid(entity,'unit')+'">'+esc(attrs.get('unit_of_measurement','') if available else '')+'</span>'
+        else:body+='<span class="badge-value" id="'+bid(entity,'state')+'">'+display_state(domain,state,attrs)+'</span>'
+    return body+'</div>'
+
+def light_button(config,entity,item,device,page_index):
+    state=item['state'];known=state in {'on','off'}
+    icon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">'+ICONS['mdi:lightbulb']+'<g class="light-slash"><path d="M3 3L21 21" fill="none" stroke="#fff" stroke-width="4"/><path d="M3 3L21 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g></svg>'
+    return ('<form class="light-form" method="post" action="action">'+hidden(device,entity)+
+        '<input type="hidden" name="seite" value="'+str(page_index)+'">'+
+        '<button id="'+bid(entity,'toggle')+'" class="light-button '+('is-'+state if known else 'is-unavailable')+
+        '" name="action" value="'+('turn_off' if state=='on' else 'turn_on')+'" aria-pressed="'+('true' if state=='on' else 'false')+'"'+(' disabled' if not known else '')+'>'+
+        '<span class="light-button-icon">'+icon+'<span class="light-unknown" aria-hidden="true">?</span></span>'+
+        '<span class="light-button-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span></button></form>')
+
 def tile(config,card,states,device,page_index):
     columns=card_columns(card);width=columns*100/12
-    start='<div class="tile" style="width:'+format(width,'.5f')+'%">'
+    start=('<div class="tile badge-slot" style="width:auto">' if card['type']=='badge' else '<div class="tile" style="width:'+format(width,'.5f')+'%">')
     if card['type']=='heading':return start+'<div class="tile-heading-card">'+esc(card.get('name',''))+'</div></div>'
     if card['type']=='unsupported':return start+'<div class="tile-inner"><h2 class="tile-label">'+esc(card['name'])+'</h2><p>Diese Karte wird noch nicht unterstützt.</p></div></div>'
     entity=card['entity'];item=states.get(entity,{'state':'unavailable','attributes':{}});attrs=item.get('attributes',{});state=item['state'];domain=entity.split('.')[0]
+    if card['type']=='badge':return start+badge_tile(config,card,entity,item)+'</div>'
     if domain=='climate':return start+climate_panel(config,entity,item,device,more=True)+'</div>'
+    if domain=='light' and not card.get('read_only',False):return start+light_button(config,entity,item,device,page_index)+'</div>'
     control=domain in {'light','switch','input_boolean','scene'} and not card.get('read_only',False)
     unavailable=state=='unavailable' or state=='unknown' and domain!='scene'
     body=start+'<div class="tile-inner'+(' tile-control' if control else '')+'"><div class="tile-heading"><span class="tile-icon">'+entity_icon(config,entity,item)+'</span><h2 class="tile-label" id="'+bid(entity,'label')+'" title="'+esc(label(config,entity,item))+'">'+esc(label(config,entity,item))+'</h2></div>'
     if domain=='sensor':
-        body+='<div class="tile-reading" id="'+bid(entity,'value')+'">'+(display_state(domain,state,attrs) if unavailable else number(state))+'</div><span class="tile-unit" id="'+bid(entity,'unit')+'">'+esc(attrs.get('unit_of_measurement','') if not unavailable else '')+'</span>'
+        body+='<div class="tile-reading" id="'+bid(entity,'value')+'">'+(display_state(domain,state,attrs) if unavailable else sensor_number(config,entity,state))+'</div><span class="tile-unit" id="'+bid(entity,'unit')+'">'+esc(attrs.get('unit_of_measurement','') if not unavailable else '')+'</span>'
     else:
         body+='<div class="tile-reading tile-status" id="'+bid(entity,'state')+'">'+display_state(domain,state,attrs)+'</div>'
     if control:
@@ -269,7 +321,14 @@ def dashboard(config,states,device,page_index,refresh):
         body+='</nav>'
     if not any(groups):
         body+='<div class="empty-state">Dieses Dashboard ist noch leer.</div>'
-    body+='<div class="dashboard-grid">'+''.join(tile(config,card,states,device,page_index) for card in groups[page_index])+'</div>'
+    body+='<div class="dashboard-grid">';in_badges=False
+    for card in groups[page_index]:
+        badge=card['type']=='badge'
+        if in_badges and not badge:body+='</div>';in_badges=False
+        if badge and not in_badges:body+='<div class="dashboard-badges">';in_badges=True
+        body+=tile(config,card,states,device,page_index)
+    if in_badges:body+='</div>'
+    body+='</div>'
     body+='<footer class="bottom"><table class="bottom-table"><tr><td>'+live_footer()+'</td><td class="right">'
     if pages>1:
         body+=str(page_index+1)+' / '+str(pages)

@@ -17,9 +17,9 @@ On first start, the app creates a separate **Kindle** dashboard (`kindle-panel`)
 
 ## Layout in Home Assistant
 
-Edit the assigned dashboard with Home Assistant's dashboard editor. Sections, headings, tile, thermostat, entity, button, sensor, entities lists, and grid/horizontal/vertical stacks are translated. Supported domains: sensor, binary_sensor, climate, light, switch, input_boolean, scene and weather. Entity badges (including legacy entity-ID strings) appear as compact read-only status tiles above the cards and update live. Existing cards take precedence over duplicate badges. Custom/conditional badges and badge attribute displays are skipped with a warning.
+Edit the assigned dashboard with Home Assistant's dashboard editor. Sections, headings, tile, thermostat, entity, button, sensor, entities lists, and grid/horizontal/vertical stacks are translated. Supported domains: sensor, binary_sensor, climate, light, switch, input_boolean, scene and weather. Entity badges (including legacy entity-ID strings) appear as compact read-only pills with the HA icon, value and unit above the cards and update live. Existing cards take precedence over duplicate badges. Custom/conditional badges and badge attribute displays are skipped with a warning.
 
-Use a Sections view with one section column for a predictable Kindle layout. Card widths are interpreted on a 12-column grid: status tiles default to 3, controls to 6, climates to 12. Climate controls require at least 6. The renderer repaginates for the small display; it is a monochrome translation rather than a pixel-identical copy. Duplicate entities in one view are shown once.
+Use a Sections view with one section column for a predictable Kindle layout. Card widths are interpreted on a 12-column grid: status tiles and single-button lights default to 3, other controls to 6, climates to 12. Lights use a filled bulb for on and a crossed-out bulb for off; icons and next actions follow confirmed HA state. The HA entity display precision is used for sensor values, including trailing zeroes. Climate controls require at least 6. The renderer repaginates for the small display; it is a monochrome translation rather than a pixel-identical copy. Duplicate entities in one view are shown once.
 
 Custom cards, conditional visibility and arbitrary tap actions are not executed. The app shows translation warnings. Conditional cards/sections/views are omitted. Use a dedicated dashboard with ordinary supported cards for each room. A dashboard assignment limits this client's displayed and controllable entities; it is not a replacement for Home Assistant user permissions.
 
@@ -71,4 +71,4 @@ Tests cover pairing/CSRF, dashboard translation, room separation, per-device exi
 
 ## License
 
-Project source: MIT. Curated Material Design Icons: Apache 2.0, see [third-party notices](THIRD_PARTY.md). Runtime tools are obtained separately from pinned upstream archives and retain their respective licenses.
+Project source: MIT. Material Design Icons: Apache 2.0, see [third-party notices](THIRD_PARTY.md). Runtime tools are obtained separately from pinned upstream archives and retain their respective licenses.
