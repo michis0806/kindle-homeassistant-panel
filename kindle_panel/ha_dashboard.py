@@ -7,8 +7,8 @@ import re
 import time
 
 PATH = 'kindle-panel'
-DOMAINS = {'sensor','binary_sensor','climate','light','switch','input_boolean','scene','weather'}
-CONTROLS = {'climate','light','switch','input_boolean','scene'}
+DOMAINS = {'sensor','binary_sensor','climate','light','switch','input_boolean','scene','weather','cover','script','fan'}
+CONTROLS = {'climate','light','switch','input_boolean','scene','cover','script','fan'}
 
 
 def commands(requests):
@@ -123,14 +123,14 @@ def translate(raw, display=None):
                 except (TypeError,ValueError):columns=default_columns(entity)
                 if entity.startswith('climate.') and columns<6:
                     columns=6;warn('Klimapanels benötigen mindestens halbe Breite.')
-                if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.')) and columns<6:
+                if entity.split('.')[0] in CONTROLS and not entity.startswith(('climate.','light.','script.','fan.')) and columns<6:
                     columns=6;warn('Bedienbare Kacheln benötigen mindestens halbe Breite.')
                 action=card.get('tap_action',{}).get('action') if isinstance(card.get('tap_action',{}),dict) else None
                 read_only=action=='none'
                 if action not in (None,'none','more-info','toggle'):
                     read_only=True;warn('Spezielle Tipp-Aktion für '+entity+' wird nicht ausgeführt.')
                 for feature in card.get('features',[]):
-                    if isinstance(feature,dict) and feature.get('type') not in {'climate-hvac-modes','climate-temperature','toggle'}:
+                    if isinstance(feature,dict) and feature.get('type') not in {'climate-hvac-modes','climate-temperature','toggle','cover-open-close'}:
                         warn('Zusatzbedienung '+str(feature.get('type'))+' wird noch nicht übersetzt.')
                 name=card.get('name')
                 if not isinstance(name,str):name=None
@@ -172,7 +172,7 @@ def translate(raw, display=None):
         views.append({'title':title,'path':path,'groups':groups})
     if not views:views=[{'title':'Zuhause','path':'zuhause','groups':[]}]
     selected_display={entity:display[entity] for entity in all_entities if entity in display}
-    revision=hashlib.sha256(json.dumps([raw,selected_display,'compact-controls-1'],sort_keys=True).encode()).hexdigest()
+    revision=hashlib.sha256(json.dumps([raw,selected_display,'covers-and-viewport-1'],sort_keys=True).encode()).hexdigest()
     return {'views':views,'entities':all_entities,'control_entities':controls,'warnings':warnings,'revision':revision,'display':selected_display}
 
 

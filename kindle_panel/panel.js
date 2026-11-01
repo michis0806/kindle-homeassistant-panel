@@ -3,6 +3,30 @@
     var stopped = false, online = false, polling = false, pollTimer = null;
     var pending = null, pendingTimer = null, clicked = null;
     var status = document.getElementById('panel-status');
+    var viewportTimers = [], viewportWidth = 0, viewportHeight = 0;
+    function fitViewport() {
+        var root = document.getElementById('dashboard-root') || document.body;
+        var doc = document.documentElement;
+        if (!root || !root.style || !doc) { return; }
+        var width = doc.clientWidth || window.innerWidth;
+        var height = window.innerHeight || doc.clientHeight;
+        if (width > 0 && width !== viewportWidth) { root.style.width = width + 'px'; viewportWidth = width; }
+        if (height > 0 && height !== viewportHeight) { root.style.minHeight = height + 'px'; viewportHeight = height; }
+    }
+    if (document.documentElement) {
+        fitViewport();
+        // Mesquite can resize the content window after its native bars disappear.
+        // Reflow the existing document instead of reloading the page.
+        if (window.addEventListener) {
+            window.addEventListener('resize', fitViewport, false);
+            window.addEventListener('orientationchange', fitViewport, false);
+            window.addEventListener('pageshow', fitViewport, false);
+        }
+        viewportTimers.push(setTimeout(fitViewport, 150));
+        viewportTimers.push(setTimeout(fitViewport, 600));
+        viewportTimers.push(setTimeout(fitViewport, 1500));
+    }
+
     function text(node, value) {
         value = String(value);
         if (!node) { return; }
@@ -63,12 +87,15 @@
     function confirmed(data) {
         var item = pending && data.entities[pending.entity], action = pending && pending.action;
         if (!item || !pending.ack) { return false; }
+        if (action === 'open_cover') { return item.state === 'opening' || item.state === 'open'; }
+        if (action === 'close_cover') { return item.state === 'closing' || item.state === 'closed'; }
         if (action === 'climate_temperature') { return item.temperature !== null && typeof item.temperature !== 'undefined' && Number(item.temperature) === Number(pending.value.replace(',', '.')); }
         if (action === 'climate_hvac') { return item.state === pending.value; }
         if (action === 'climate_fan') { return item.fan_mode === pending.value; }
         return (action === 'turn_on' && item.state === 'on') || (action === 'turn_off' && item.state === 'off');
     }
     function render(data) {
+        fitViewport();
         var i, root=document.getElementById('dashboard-root');
         if (!pending && root && data.revision && root.getAttribute('data-revision')!==data.revision) {
             window.location.reload(); return;
@@ -168,6 +195,6 @@
             }
         });
     }, false);
-    window.onunload = function () { stopped = true; clearTimeout(pollTimer); clearTimeout(pendingTimer); };
+    window.onunload = function () { var i; for (i=0; i<viewportTimers.length; i+=1) { clearTimeout(viewportTimers[i]); } stopped = true; clearTimeout(pollTimer); clearTimeout(pendingTimer); };
     lockButtons(); poll();
 }());

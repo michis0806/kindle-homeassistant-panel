@@ -107,6 +107,28 @@ class DashboardTests(unittest.TestCase):
         markup=ui.dashboard(config,{'light.desk':{'state':'off','attributes':{}}},{'csrf':'test'},0,30)
         self.assertIn('Beleuchtung',markup);self.assertIn('Sonderkarte',markup)
 
+    def test_cover_script_and_fan_cards_are_translated_without_arbitrary_actions(self):
+        model=translate({'views':[{'cards':[
+            {'type':'tile','entity':'cover.shade','features':[{'type':'cover-open-close'}]},
+            {'type':'tile','entity':'script.ventilate'}, {'type':'tile','entity':'fan.room'},
+            {'type':'button','entity':'script.private','tap_action':{'action':'perform-action','perform_action':'script.unrelated'}}]}]})
+        config=view_config({},model)
+        self.assertEqual(model['control_entities'],['cover.shade','script.ventilate','fan.room'])
+        self.assertEqual(config['columns']['cover.shade'],6)
+        self.assertEqual(config['columns']['script.ventilate'],6)
+        self.assertTrue(config['read_only']['script.private'])
+        self.assertEqual(len(model['warnings']),1)
+
+    def test_section_heading_stays_with_its_next_controls(self):
+        cards=[{'type':'climate','entity':'climate.a','columns':12},
+            {'type':'climate','entity':'climate.b','columns':12},
+            {'type':'heading','name':'Next room'},
+            {'type':'entity','entity':'script.room','columns':6,'read_only':False}]
+        pages=ui.dashboard_pages(cards)
+        self.assertEqual(len(pages),2)
+        self.assertEqual(pages[1][0]['name'],'Next room')
+        self.assertEqual(pages[1][1]['entity'],'script.room')
+
     def test_existing_dashboard_is_never_overwritten(self):
         calls=[]
         def call(requests):

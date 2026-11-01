@@ -1,5 +1,5 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
-let mutations=0, timers=[], requests=[], handlers={};
+let mutations=0, timers=[], requests=[], handlers={}, windowHandlers={}, reloads=0;
 function textNode(value) {
     let stored=value;
     return {nodeType:3, get nodeValue(){return stored;}, set nodeValue(v){stored=v;mutations++;}};
@@ -26,16 +26,22 @@ function form(button,action,extra){
 const tempForm=form(plus,'climate_temperature'), modeForm=form(apply,'climate_hvac',select), directModeForm=form(modeButton,'climate_hvac');
 const light=add('button','e-light-test-toggle','turn_on');light.name='action';light.className='light-button is-off';light.attributes['aria-pressed']='false';
 const lightForm=form(light,'turn_on');lightForm.elements=lightForm.elements.filter(c=>c.name!=='action'||c===light);lightForm.elements.find(c=>c.name==='entity').value='light.test';
-const document={forms:[tempForm,modeForm,directModeForm,lightForm],activeElement:null,getElementById(id){return nodes[id]||null;},
+const root=add('div','dashboard-root');root.style={};
+const scriptButton=add('button','e-script-test-run');
+const scriptForm=form(scriptButton,'activate');scriptForm.elements.find(c=>c.name==='entity').value='script.test';
+const document={documentElement:{clientWidth:600,clientHeight:800},forms:[tempForm,modeForm,directModeForm,lightForm,scriptForm],activeElement:null,getElementById(id){return nodes[id]||null;},
     createElement(tag){return node(tag,'');},createTextNode:textNode,
     addEventListener(name,fn){handlers[name]=fn;}};
-const context={document,window:{},JSON,Number,String,
+const context={document,window:{innerHeight:800,addEventListener(name,fn){windowHandlers[name]=fn;},location:{search:"",reload(){reloads++;}}},JSON,Number,String,
     setTimeout(fn,delay){const t={fn,delay};timers.push(t);return t;},
     clearTimeout(t){timers=timers.filter(x=>x!==t);},
     XMLHttpRequest:function(){requests.push(this);this.readyState=0;this.status=0;
         this.open=function(method,url){this.method=method;this.url=url;};this.setRequestHeader=function(){};
         this.send=function(body){this.body=body;};this.abort=function(){};}};
 vm.runInNewContext(fs.readFileSync(__dirname+'/panel.js','utf8'),context);
+assert.equal(root.style.width,'600px');assert.equal(root.style.minHeight,'800px');
+const initialRequests=requests.length;document.documentElement.clientWidth=758;context.window.innerHeight=1024;windowHandlers.resize();
+assert.equal(root.style.width,'758px');assert.equal(root.style.minHeight,'1024px');assert.equal(reloads,0);assert.equal(requests.length,initialRequests,'Resize must not reload or fetch the page');
 function respond(method,code,data){
     const r=requests.find(r=>r.method===method&&!r.replied);assert(r,'Expected '+method);
     r.replied=true;r.status=code;r.readyState=4;r.responseText=JSON.stringify(data);r.onreadystatechange();return r;
@@ -74,4 +80,9 @@ assert.equal(light.className,'light-button is-off','No optimistic light icon cha
 next(0);respond('GET',200,lightSnapshot('off'));assert(light.disabled,'Wait for confirmed light state');
 next(2000);respond('GET',200,lightSnapshot('on'));assert(!light.disabled);assert.equal(light.value,'turn_off');assert.equal(light.className,'light-button is-on');assert.equal(light.getAttribute('aria-pressed'),'true');
 submit(lightForm,light);assert(respond('POST',202,{accepted:true}).body.includes('action=turn_off'));next(0);respond('GET',200,lightSnapshot('off'));assert.equal(light.getAttribute('aria-pressed'),'false');
-console.log('Panel tests passed: no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');
+submit(scriptForm,scriptButton);const scriptRequests=requests.length;submit(scriptForm,scriptButton);assert.equal(requests.length,scriptRequests,'One script activation while request is pending');
+const scriptPost=respond('POST',202,{accepted:true});assert(scriptPost.body.includes('action=activate'));assert(scriptPost.body.includes('entity=script.test'));
+assert(!scriptButton.disabled,'Script activation does not wait for a short-lived on state');
+const coverButton=add('button','e-cover-test-open_cover');const coverForm=form(coverButton,'open_cover');coverForm.elements.find(c=>c.name==='entity').value='cover.test';document.forms.push(coverForm);
+submit(coverForm,coverButton);respond('POST',202,{accepted:true});assert(coverButton.disabled);next(0);const moving=lightSnapshot('off');moving.entities['cover.test']={state:'opening'};moving.patches.push({id:coverButton.id,disabled:false});respond('GET',200,moving);assert(!coverButton.disabled,'Cover command is confirmed when movement starts');
+console.log('Panel tests passed: viewport resize without reload, script activation, cover movement confirmation, no unchanged repaint, dirty selection, command confirmation, duplicate prevention, focused +/- values, reconnect.');

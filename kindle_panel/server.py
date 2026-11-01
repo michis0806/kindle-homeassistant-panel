@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
-DOMAINS = {'light', 'switch', 'input_boolean', 'scene', 'sensor', 'binary_sensor', 'climate', 'weather'}
+DOMAINS = {'light', 'switch', 'input_boolean', 'scene', 'sensor', 'binary_sensor', 'climate', 'weather', 'cover', 'script', 'fan'}
 COOKIE = 'kindle_panel_device'
 
 def esc(value):
@@ -275,8 +275,16 @@ class App:
                 payload['fan_mode'] = value
             else:
                 raise ValueError('Climate action not supported')
+        elif domain == 'cover':
+            capability={'open_cover':1,'close_cover':2}.get(action)
+            if not capability or not int(item.get('attributes',{}).get('supported_features',0)) & capability:
+                raise ValueError('Cover action not supported')
+            service=action
+        elif domain == 'script':
+            if action != 'activate' or item['state']=='on':raise ValueError('Script cannot be started')
+            service='turn_on'
         else:
-            allowed = {'turn_on', 'turn_off'} if domain in {'light', 'switch', 'input_boolean'} else {'activate'} if domain == 'scene' else set()
+            allowed = {'turn_on', 'turn_off'} if domain in {'light', 'switch', 'input_boolean','fan'} else {'activate'} if domain == 'scene' else set()
             if action not in allowed:
                 raise ValueError('Action not allowed')
             service = 'turn_on' if action == 'activate' else action

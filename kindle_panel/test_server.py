@@ -325,6 +325,42 @@ class PanelTests(unittest.TestCase):
         button=next(p for p in patches if p['id']=='e-light-test-toggle')
         self.assertTrue(button['disabled']);self.assertEqual(button['className'],'light-button is-unavailable')
 
+    def add_cover_and_script(self):
+        self.states['cover.shade']={'entity_id':'cover.shade','state':'closed','attributes':{'supported_features':3,'current_position':0}}
+        self.states['script.ventilate']={'entity_id':'script.ventilate','state':'off','attributes':{}}
+        self.states['fan.room']={'entity_id':'fan.room','state':'off','attributes':{}}
+        self.app.set_entities(['cover.shade','script.ventilate','fan.room'])
+
+    def test_cover_arrows_and_script_button_use_only_supported_services(self):
+        self.add_cover_and_script();token,device=self.pair();headers={'Cookie':COOKIE+'='+token}
+        status,_,body=self.request(self.public,headers=headers)
+        self.assertEqual(status,200)
+        self.assertIn('id="e-cover-shade-open_cover" aria-label="Öffnen">↑</button>',body)
+        self.assertIn('id="e-cover-shade-close_cover" aria-label="Schließen" disabled>↓</button>',body)
+        self.assertIn('id="e-script-ventilate-run"',body)
+        self.assertIn('id="e-fan-room-toggle"',body)
+        for entity,action in [('cover.shade','open_cover'),('script.ventilate','activate'),('fan.room','turn_on')]:
+            self.assertEqual(self.request(self.public,'POST','/action.json',{'csrf':device['csrf'],'entity':entity,'action':action},headers)[0],202)
+        self.assertEqual(self.calls,[('services/cover/open_cover',{'entity_id':'cover.shade'}),
+            ('services/script/turn_on',{'entity_id':'script.ventilate'}),('services/fan/turn_on',{'entity_id':'fan.room'})])
+        self.states['cover.shade']['attributes']['supported_features']=1
+        with self.assertRaises(ValueError):self.app.control(token,device['csrf'],'cover.shade','close_cover')
+        with self.assertRaises(ValueError):self.app.control(token,device['csrf'],'cover.shade','set_cover_position','50')
+        self.states['script.ventilate']['state']='on'
+        with self.assertRaises(ValueError):self.app.control(token,device['csrf'],'script.ventilate','activate')
+        with self.assertRaises(ValueError):self.app.control(token,device['csrf'],'script.ventilate','turn_off')
+        self.assertEqual(len(self.calls),3)
+
+    def test_cover_arrows_update_from_real_position_and_script_from_running_state(self):
+        self.add_cover_and_script();token,_=self.pair()
+        self.states['cover.shade']['state']='open';self.states['cover.shade']['attributes']['current_position']=100
+        self.states['script.ventilate']['state']='on'
+        data=self.app.panel_snapshot(token)
+        patches={p['id']:p for p in data['patches']}
+        self.assertTrue(patches['e-cover-shade-open_cover']['disabled'])
+        self.assertFalse(patches['e-cover-shade-close_cover']['disabled'])
+        self.assertTrue(patches['e-script-ventilate-run']['disabled'])
+
     def test_each_kindles_exit_signal_is_separate(self):
         a,da=self.pair();b,db=self.pair();ca='a'*32;cb='b'*32
         self.app.bind_controller(a,ca);self.app.bind_controller(b,cb)

@@ -8,10 +8,11 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 import time
 
 MODES = {'off':'Aus', 'heat':'Heizen', 'cool':'Kühlen', 'heat_cool':'Heizen / Kühlen', 'fan_only':'Nur Lüften', 'dry':'Entfeuchten', 'auto':'Automatisch'}
-KINDS = {'light':'Licht', 'switch':'Schalter', 'input_boolean':'Schalter', 'scene':'Szene', 'climate':'Raumklima', 'sensor':'Messwert', 'binary_sensor':'Status', 'weather':'Wetter'}
+KINDS = {'light':'Licht', 'switch':'Schalter', 'input_boolean':'Schalter', 'scene':'Szene', 'climate':'Raumklima', 'sensor':'Messwert', 'binary_sensor':'Status', 'weather':'Wetter','cover':'Abdeckung','script':'Skript','fan':'Lüfter'}
 CSS = '''
 *{-webkit-box-sizing:border-box;box-sizing:border-box}
 body{margin:22px;background:#fff;color:#111;font:20px Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%}
+html{width:100%;height:100%}body.kindle{width:100%;min-height:100%;padding:0;overflow-x:hidden}.kindle>.panel{width:100%;max-width:none;min-height:100%}
 a{color:inherit}h1{font:normal 34px Georgia,serif;margin:0 0 16px}h2{font-size:23px}p{line-height:1.45}
 button,input,select{font:inherit;color:#111;background:#fff;border:1px solid #777;border-radius:0;padding:12px}
 button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:block;margin:18px 0}select{max-width:100%;width:100%}
@@ -70,6 +71,7 @@ button{cursor:pointer}button:disabled{color:#777;cursor:default}label{display:bl
 .tile-active{border-color:#111}.tile-unavailable{color:#777}.tile .climate-panel{border-radius:10px}
 .badge-pill{display:inline-block;max-width:100%;height:44px;border:1px solid #aaa;border-radius:24px;padding:8px 11px;white-space:nowrap;overflow:hidden;vertical-align:top;font:18px/26px Arial,sans-serif}
 .badge-icon{display:inline-block;width:24px;height:26px;vertical-align:top;margin-right:7px}.badge-icon svg{width:24px;height:24px;vertical-align:middle}.badge-unit{margin-left:4px}.badge-value{vertical-align:top}
+.cover-inner{height:100px;padding:10px;border:1px solid #aaa;border-radius:10px;overflow:hidden}.cover-label{display:block;font:16px/22px Arial,sans-serif;height:22px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.cover-arrows{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:8px}.cover-arrows td{padding:0 3px}.cover-arrows form{margin:0}.cover-arrows button{width:100%;height:48px;padding:0;font:30px/44px Arial,sans-serif;border-radius:6px}.cover-arrows button:disabled{color:#aaa;border-color:#ccc}
 .light-form{margin:0}.light-button{display:block;width:100%;height:72px;padding:12px 10px;border:1px solid #aaa;border-radius:10px;text-align:left;background:#fff;color:#111;overflow:hidden}
 .light-button.is-on{border-color:#111}.light-button:disabled{color:#999;border-color:#aaa}.light-button-icon{float:left;width:30px;height:40px;margin-right:8px;line-height:40px;text-align:center}
 .light-button svg{width:28px;height:28px;vertical-align:middle}.light-button.is-on .light-slash{display:none}.light-button-label{display:block;height:40px;overflow:hidden;font:14px/40px Arial,sans-serif;white-space:nowrap;text-overflow:ellipsis}
@@ -140,6 +142,8 @@ def display_state(domain,state,attrs):
         names={'occupancy':('Belegt','Frei'),'motion':('Bewegung','Ruhig'),'presence':('Anwesend','Abwesend')}[attrs['device_class']]
         return {'on':names[0],'off':names[1]}.get(state,esc(state))
     if domain=='scene':return 'Bereit'
+    if domain=='script':return 'Läuft' if state=='on' else 'Bereit'
+    if domain=='cover':return {'open':'Offen','closed':'Geschlossen','opening':'Öffnet','closing':'Schließt'}.get(state,esc(state))
     if domain=='binary_sensor' and attrs.get('device_class') in {'door','window','opening','garage_door'}:
         return {'on':'Offen','off':'Geschlossen'}.get(state,esc(state))
     return {'on':'An','off':'Aus'}.get(state,esc(state))
@@ -183,7 +187,7 @@ def updates(config,states):
         plain=lambda value: html.unescape(str(value))
         patch(entity,'label',text=label(config,entity,item))
         patch(entity,'state',text=plain(display_state(domain,state,attrs)))
-        if domain=='light':
+        if domain in {'light','fan'}:
             patch(entity,'toggle',value='turn_off' if state=='on' else 'turn_on',
                 disabled=not writable or state not in {'on','off'},
                 className='light-button '+('is-'+state if state in {'on','off'} else 'is-unavailable'),
@@ -191,6 +195,9 @@ def updates(config,states):
         for action in ('on','off','activate'):
             active=action==state
             patch(entity,action,disabled=not writable,className='active' if active else '')
+        if domain=='script':patch(entity,'run',disabled=not writable or state=='on')
+        if domain=='cover':
+            for action,disabled in cover_actions(item):patch(entity,action,disabled=not writable or disabled)
         if domain=='sensor':
             patch(entity,'value',text=plain(sensor_number(config,entity,state) if available else display_state(domain,state,attrs)))
             patch(entity,'unit',text=str(attrs.get('unit_of_measurement','')) if available else '')
@@ -238,9 +245,14 @@ def dashboard_pages(selected):
         if card['type']=='heading':return 38
         if card['type']=='badge':return 52
         if card['type']=='climate':return 270 if card_columns(card)<12 else 258
-        if card.get('entity','').startswith('light.') and not card.get('read_only'):return 80
+        if card.get('entity','').split('.')[0] in {'light','fan','script'} and not card.get('read_only'):return 80
+        if card.get('entity','').startswith('cover.') and not card.get('read_only'):return 108
         return 144 if card.get('entity','').split('.')[0] in {'light','switch','input_boolean','scene'} else 124
-    for card in cards:
+    for index,card in enumerate(cards):
+        if card['type']=='heading' and current and index+1<len(cards):
+            following=cards[index+1]
+            if height+(row_height if row_width else 0)+38+card_height(following)>620:
+                pages.append(current);current=[];height=0;row_width=0;row_height=0
         if current and current[-1]['type']=='badge' and card['type']!='badge' and row_width:
             height+=row_height;row_width=0;row_height=0
         width=card_columns(card);cost=card_height(card)
@@ -259,7 +271,7 @@ def entity_icon(config,entity,item):
     attrs=item.get('attributes',{});domain=entity.split('.')[0];device_class=attrs.get('device_class')
     default={'temperature':'thermometer','humidity':'water-percent','occupancy':'motion-sensor','motion':'motion-sensor',
         'presence':'account','door':'door','window':'window-closed','opening':'window-closed','power':'flash','energy':'flash','battery':'battery'}.get(device_class)
-    if not default:default={'light':'lightbulb','switch':'power','input_boolean':'toggle-switch','scene':'home','weather':'cloud','climate':'radiator'}.get(domain,'gauge')
+    if not default:default={'light':'lightbulb','switch':'power','input_boolean':'toggle-switch','scene':'home','cover':'window-shutter','script':'script-text-play','fan':'fan','weather':'cloud','climate':'radiator'}.get(domain,'gauge')
     name=config.get('icons',{}).get(entity) or attrs.get('icon') or 'mdi:'+default
     paths=ICONS.get(name,ICONS['mdi:'+default])
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'+paths+'</svg>'
@@ -277,13 +289,30 @@ def badge_tile(config,card,entity,item):
 
 def light_button(config,entity,item,device,page_index):
     state=item['state'];known=state in {'on','off'}
-    icon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">'+ICONS['mdi:lightbulb']+'<g class="light-slash"><path d="M3 3L21 21" fill="none" stroke="#fff" stroke-width="4"/><path d="M3 3L21 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g></svg>'
+    path=ICONS['mdi:fan'] if entity.startswith('fan.') else ICONS['mdi:lightbulb']
+    icon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">'+path+'<g class="light-slash"><path d="M3 3L21 21" fill="none" stroke="#fff" stroke-width="4"/><path d="M3 3L21 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g></svg>'
     return ('<form class="light-form" method="post" action="action">'+hidden(device,entity)+
         '<input type="hidden" name="seite" value="'+str(page_index)+'">'+
         '<button id="'+bid(entity,'toggle')+'" class="light-button '+('is-'+state if known else 'is-unavailable')+
         '" name="action" value="'+('turn_off' if state=='on' else 'turn_on')+'" aria-pressed="'+('true' if state=='on' else 'false')+'"'+(' disabled' if not known else '')+'>'+
         '<span class="light-button-icon">'+icon+'<span class="light-unknown" aria-hidden="true">?</span></span>'+
         '<span class="light-button-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span></button></form>')
+
+def cover_actions(item):
+    attrs=item.get('attributes',{});features=int(attrs.get('supported_features',0));position=attrs.get('current_position');state=item['state']
+    return [('open_cover',not features&1 or state=='opening' or position==100),
+        ('close_cover',not features&2 or state in {'closing','closed'} or position==0)]
+
+def cover_tile(entity,item,device,page_index,config):
+    body='<div class="cover-inner"><span class="cover-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span><table class="cover-arrows"><tr>'
+    for action,disabled in cover_actions(item):
+        body+='<td><form method="post" action="action">'+hidden(device,entity,action)+'<input type="hidden" name="seite" value="'+str(page_index)+'"><button id="'+bid(entity,action)+'" aria-label="'+('Öffnen' if action=='open_cover' else 'Schließen')+'"'+(' disabled' if disabled or item['state'] in {'unknown','unavailable'} else '')+'>'+('↑' if action=='open_cover' else '↓')+'</button></form></td>'
+    return body+'</tr></table></div>'
+
+def script_tile(config,entity,item,device,page_index):
+    return ('<form class="light-form" method="post" action="action">'+hidden(device,entity,'activate')+
+        '<input type="hidden" name="seite" value="'+str(page_index)+'"><button class="light-button" id="'+bid(entity,'run')+'"'+(' disabled' if item['state'] in {'on','unknown','unavailable'} else '')+'>'+
+        '<span class="light-button-icon">'+entity_icon(config,entity,item)+'</span><span class="light-button-label" id="'+bid(entity,'label')+'">'+esc(label(config,entity,item))+'</span></button></form>')
 
 def tile(config,card,states,device,page_index):
     columns=card_columns(card);width=columns*100/12
@@ -293,7 +322,9 @@ def tile(config,card,states,device,page_index):
     entity=card['entity'];item=states.get(entity,{'state':'unavailable','attributes':{}});attrs=item.get('attributes',{});state=item['state'];domain=entity.split('.')[0]
     if card['type']=='badge':return start+badge_tile(config,card,entity,item)+'</div>'
     if domain=='climate':return start+climate_panel(config,entity,item,device,more=True)+'</div>'
-    if domain=='light' and not card.get('read_only',False):return start+light_button(config,entity,item,device,page_index)+'</div>'
+    if domain in {'light','fan'} and not card.get('read_only',False):return start+light_button(config,entity,item,device,page_index)+'</div>'
+    if domain=='cover' and not card.get('read_only',False):return start+cover_tile(entity,item,device,page_index,config)+'</div>'
+    if domain=='script' and not card.get('read_only',False):return start+script_tile(config,entity,item,device,page_index)+'</div>'
     control=domain in {'light','switch','input_boolean','scene'} and not card.get('read_only',False)
     unavailable=state=='unavailable' or state=='unknown' and domain!='scene'
     body=start+'<div class="tile-inner'+(' tile-control' if control else '')+'"><div class="tile-heading"><span class="tile-icon">'+entity_icon(config,entity,item)+'</span><h2 class="tile-label" id="'+bid(entity,'label')+'" title="'+esc(label(config,entity,item))+'">'+esc(label(config,entity,item))+'</h2></div>'

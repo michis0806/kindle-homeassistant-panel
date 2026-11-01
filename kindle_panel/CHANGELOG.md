@@ -1,3 +1,7 @@
+# 0.8.0
+
+Cover-Karten mit Auf-/Zu-Pfeilen, direkt auslösbare Skript-Tasten und einfache Lüfter-Ein-/Aus-Bedienung. Aktionen bleiben auf das zugewiesene Dashboard und unterstützte Gerätefunktionen begrenzt. Vollbreite Kindle-Seite ohne Desktop-Breitenlimit und erneute Größenanpassung nach Fensteränderungen ohne Seitenreload.
+
 # 0.7.3
 
 Überschriften und Platzhalter ohne Entität blockieren die Dashboard-Übersetzung nicht mehr.
