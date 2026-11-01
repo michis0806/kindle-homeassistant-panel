@@ -1,0 +1,4 @@
+#!/bin/sh
+ROOT=/mnt/us/extensions/HAKiosk/tools/kiosk-http
+export LD_LIBRARY_PATH="$ROOT/lib"
+exec "$ROOT/bin/curl" --disable --noproxy '*' --silent --fail --connect-timeout 1 --max-time 2 "$@"

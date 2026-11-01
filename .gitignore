@@ -1,0 +1,20 @@
+# Private development state and hardware backups
+backups/
+downloads/
+outputs/
+preparation.json
+KINDLE-EINRICHTUNG.txt
+addon/
+device/
+prepare_sqlite_tools.py
+.runtime/
+*.log
+**/state/
+**/controller-id.txt
+**/url.txt
+**/settings.js
+**/__pycache__/
+.venv/
+.DS_Store
+.local/
+build/

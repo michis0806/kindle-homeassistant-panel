@@ -1,0 +1,66 @@
+{
+  "items": [
+    {
+      "name": "Kindle-Startseite",
+      "action": "sh ./kiosk.sh home",
+      "priority": -1000,
+      "exitmenu": true,
+      "refresh": false,
+      "status": false
+    },
+    {
+      "name": "Home Assistant",
+      "priority": -900,
+      "items": [
+        {
+          "name": "Home Assistant starten",
+          "action": "sh ./kiosk.sh fullscreen",
+          "priority": 3,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        },
+        {
+          "name": "Kiosk beenden / Home",
+          "action": "sh ./kiosk.sh home",
+          "priority": 4,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        },
+        {
+          "name": "Diagnose speichern",
+          "action": "sh ./kiosk.sh diagnose",
+          "priority": 5,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        },
+        {
+          "name": "Licht ganz aus: 5s Test",
+          "action": "sh ./light-off-test.sh test",
+          "priority": 6,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        },
+        {
+          "name": "Licht wiederherstellen",
+          "action": "sh ./light-off-test.sh restore",
+          "priority": 7,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        },
+        {
+          "name": "Beendenknopf 90s testen",
+          "action": "sh ./kiosk.sh touch-light-test",
+          "priority": 8,
+          "exitmenu": true,
+          "refresh": false,
+          "status": false
+        }
+      ]
+    }
+  ]
+}

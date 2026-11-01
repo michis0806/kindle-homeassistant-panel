@@ -1,0 +1,4 @@
+#!/bin/sh
+ROOT=/mnt/us/extensions/HAKiosk/tools
+export LD_LIBRARY_PATH="$ROOT/lib"
+exec "$ROOT/bin/sqlite3" "$@"

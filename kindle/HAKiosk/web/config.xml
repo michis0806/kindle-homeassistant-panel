@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<widget id="com.schmid.kindlekiosk" version="1.0" viewmodes="application" xmlns="http://www.w3.org/ns/widgets" xmlns:kindle="http://kindle.amazon.com/ns/widget-extensions">
+<name xml:lang="en">Home Assistant</name><description xml:lang="en">Kindle Panel</description>
+<content src="index.html"/>
+<kindle:network><kindle:asset key="enableWrsProxy" value="false"/></kindle:network>
+<kindle:cookiejar><kindle:asset key="persistent" value="true"/><kindle:asset key="usePrivateCookies" value="false"/><kindle:asset key="useDeviceCookies" value="false"/></kindle:cookiejar>
+<kindle:chrome><kindle:asset key="configureSearchBar" value="none"/></kindle:chrome>
+<kindle:gestures><kindle:param name="drag" value="yes"/><kindle:param name="tap" value="yes"/><kindle:param name="multi_tap" value="yes"/><kindle:param name="hold" value="yes"/></kindle:gestures>
+<feature name="http://kindle.amazon.com/apis" required="true"><param name="appmgr" value="yes"/><param name="chrome" value="yes"/><param name="gestures" value="yes"/><param name="messaging" value="yes"/><param name="dev" value="yes"/><param name="net" value="yes"/></feature>
+<kindle:messaging><kindle:app name="com.lab126.pillow" value="yes"/><kindle:app name="com.schmid.kindlekiosk" value="yes"/></kindle:messaging>
+<kindle:settings><kindle:setting name="internetRequired" value="no"/><kindle:setting name="debug" value="no"/></kindle:settings>
+</widget>

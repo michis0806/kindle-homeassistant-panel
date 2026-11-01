@@ -1,0 +1,39 @@
+{
+  "usbnet": {
+    "filename": "kindle-usbnet-0.22.N-r19297.tar.xz",
+    "sha256": "cf971557d42cc0a6d7699f1c743108c681fa41e3d67ee5802a91932d130d4032",
+    "upstream": "https://www.mobileread.com/forums/showthread.php?t=225030"
+  },
+  "debian_packages": [
+    {
+      "name": "libncurses5",
+      "version": "5.7+20100313-5",
+      "url": "https://archive.debian.org/debian/pool/main/n/ncurses/libncurses5_5.7+20100313-5_armel.deb",
+      "sha256": "66971037ebe0344715d37a797be8257200c9262811b089fffa6dcd3e00b0e8c8"
+    },
+    {
+      "name": "libreadline6",
+      "version": "6.1-3",
+      "url": "https://archive.debian.org/debian/pool/main/r/readline6/libreadline6_6.1-3_armel.deb",
+      "sha256": "a357e12fcee29ca7c664e21b61857f31469f3cf116d2209ccf352e0df3ac5d1b"
+    },
+    {
+      "name": "libsqlite3-0",
+      "version": "3.7.3-1",
+      "url": "https://archive.debian.org/debian/pool/main/s/sqlite3/libsqlite3-0_3.7.3-1_armel.deb",
+      "sha256": "6ea989e6454e4eafeaf7d9f91beba922c7ff3dffdcc3123f7b4227ae65ffce28"
+    },
+    {
+      "name": "sqlite3",
+      "version": "3.7.3-1",
+      "url": "https://archive.debian.org/debian/pool/main/s/sqlite3/sqlite3_3.7.3-1_armel.deb",
+      "sha256": "f4fe6e824a31e1b001d80ea13317e0e5430d26d138e2acc3e9e217429aab9b32"
+    },
+    {
+      "name": "libgcc1",
+      "version": "1:4.4.5-8",
+      "url": "https://archive.debian.org/debian/pool/main/g/gcc-4.4/libgcc1_4.4.5-8_armel.deb",
+      "sha256": "f2edca13fe3d78f455a3ab0986e89f116204dbd231609bd4c4c99381393ac998"
+    }
+  ]
+}
