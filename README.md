@@ -70,6 +70,10 @@ The server retains device approval and configuration in `/data/panel.json` acros
 
 After installing the app, check pairing, the Home Assistant dashboard, and device controls manually. Kindle startup, light and power behavior, and recovery actions require validation on the target device; simulator checks cannot establish compatibility with other Kindle models or firmware. Runtime binaries, personal configuration, backups, firmware and jailbreak downloads are excluded from Git.
 
+## Wall-mount prototype
+
+A parametric PW1 dock for a German installation box is in [hardware/wall-mount](hardware/wall-mount/). It includes STL exports in `print/`, the measured stepped lower-edge profile, a cable pocket for the existing straight Micro-USB lead and 60 mm mounting-hole spacing. Print the small profile sample first. This is prototype v0.1: rear-shell curvature, port depth, cable bend and physical fit remain unverified; read [the construction notes](hardware/wall-mount/hinweise.txt). It is a mechanical USB holder, not a rated electrical enclosure.
+
 ## License
 
 Project source: MIT. Material Design Icons: Apache 2.0, see [third-party notices](THIRD_PARTY.md). Runtime tools are obtained separately from pinned upstream archives and retain their respective licenses.
