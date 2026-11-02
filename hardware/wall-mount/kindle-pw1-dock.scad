@@ -1,4 +1,4 @@
-/* Kindle PW1 / EY21 wall dock — prototype v0.1, dimensions in mm.
+/* Kindle PW1 / EY21 wall dock — compact prototype v0.2, dimensions in mm.
    User measurements are authoritative; curved rear shell and corner radii
    remain approximate. See hinweise.txt before printing. No mains enclosure.
 */
@@ -27,7 +27,7 @@ plug_l = 16;
 relief_l = 4;
 wire_d = 3;
 body_end_play = 0.6;
-plug_side_play = 0.7;
+plug_side_play = 1.2;
 plug_depth_play = 1.6;       // lets the plug align before tightening the lid
 wire_channel = 4.4;
 bend_r = 10;                // provisional room for a relaxed 180-degree return
@@ -40,7 +40,7 @@ mount_slot = 8;
 back_t = 2.8;
 wall = 3;
 front_lip_t = 1.6;
-front_lip_h = 12;           // within the measured 27mm lower bezel
+front_lip_h = 20;           // within the measured 27mm lower bezel
 profile_contact_h = 0.8;    // contacts only the measured lower edge
 lid_t = 2.2;
 lid_pilot = 2.7;            // two M3x10 screws thread into PETG; do not overtighten
@@ -54,12 +54,18 @@ frame_front = retainer_z + front_lip_t;
 body_y = -plug_l-body_end_play;
 turn_y = body_y-relief_l;
 bay_h = ceil(-turn_y+bend_r+wire_channel/2+wall);
-x0 = -fit-wall;
-x1 = kindle_w+fit+wall;
-y0 = -bay_h;
-y1 = kindle_h+2;
+support_w = 80;
 mount_x = kindle_w/2;
-mount_y = kindle_h/2;
+mount_y = 30;
+x0 = mount_x-support_w/2;
+x1 = mount_x+support_w/2;
+y0 = -bay_h;
+y1 = mount_y+40;
+plate_y0 = mount_y-40;
+pod_w = 28;
+pod_x0 = usb_x-pod_w/2;
+pod_x1 = usb_x+pod_w/2;
+lid_screw_x = [usb_x-8,usb_x+8];
 lid_y0 = y0+0.25;
 lid_y1 = -wall-0.25;
 lid_screw_y = (lid_y0+lid_y1)/2;
@@ -92,15 +98,7 @@ module mounting_holes() {
 }
 module back_plate() {
     difference() {
-        linear_extrude(back_t) union() {
-            difference() {
-                rectangle_at(x0,y0,x1-x0,y1-y0,6);
-                rectangle_at(x0+8,y0+8,x1-x0-16,y1-y0-16,4);
-            }
-            translate([mount_x,mount_y]) circle(d=82);
-            translate([mount_x-4,y0]) square([8,y1-y0]);
-            translate([x0,mount_y-4]) square([x1-x0,8]);
-        }
+        prism_at(x0,plate_y0,support_w,80,0,back_t,6);
         translate([mount_x,mount_y,-0.1]) cylinder(d=38,h=back_t+0.2);
         mounting_holes();
     }
@@ -108,17 +106,17 @@ module back_plate() {
 // A rear bearing rib, using the measured thin/ramped/full-thickness profile.
 module bottom_profile_bearing() {
     rotate([90,0,0]) linear_extrude(profile_contact_h+0.1)
-        polygon([[ -fit,back_t ],[kindle_w+fit,back_t],
-            [kindle_w+fit,front_z-edge_t-fit],
+        polygon([[ x0,back_t ],[x1,back_t],
+            [x1,front_z-edge_t-fit],
             [kindle_w-transition_start,front_z-edge_t-fit],
             [kindle_w-transition_end,front_z-block_t-fit],
             [transition_end,front_z-block_t-fit],
-            [transition_start,front_z-edge_t-fit],[-fit,front_z-edge_t-fit]]);
+            [transition_start,front_z-edge_t-fit],[x0,front_z-edge_t-fit]]);
 }
 module footer_trough() {
     difference() {
-        prism_at(x0,y0,x1-x0,bay_h,0,front_z,6);
-        prism_at(x0+wall,y0+wall,x1-x0-2*wall,bay_h-2*wall,
+        prism_at(pod_x0,y0,pod_w,bay_h,0,front_z,5);
+        prism_at(pod_x0+wall,y0+wall,pod_w-2*wall,bay_h-2*wall,
             back_t,frame_front+1,3);
     }
 }
@@ -127,7 +125,7 @@ module connector_pod() {
         cube([18,-turn_y+2,front_z-back_t]);
 }
 module lid_posts() {
-    for(x=[12,kindle_w-12]) translate([x-5,lid_screw_y-5,back_t])
+    for(x=lid_screw_x) translate([x-5,lid_screw_y-5,back_t])
         cube([10,10,front_z-back_t]);
 }
 module wire_sweep(a,b) {
@@ -154,12 +152,11 @@ module holder() {
     difference() {
         union() {
             back_plate(); footer_trough(); connector_pod(); lid_posts();
-            // Open-front side guides, ending before the unmeasured corners.
-            for(x=[x0,kindle_w+fit]) translate([x,-6,0])
-                cube([wall,kindle_h-4,front_z]);
-            // Tiny bearing ledges touch only the outermost rim.
-            for(x=[-fit-0.2,kindle_w-0.4],y=[24,80,140])
-                translate([x,y,front_z-edge_t-fit-1.2]) cube([fit+0.6,16,1.2]);
+            // Small rear supports resist screen-touch loads; no side wrapping.
+            // Optional thin cushioning goes on these faces after checking fit.
+            for(x=[mount_x-25,mount_x+25])
+                translate([x-5,45,back_t-0.1])
+                    cube([10,12,front_z-kindle_max_t-fit-back_t+0.1]);
             // Bottom shelf and front retention strip, open above for removal.
             translate([x0,-wall,0]) cube([x1-x0,wall,frame_front]);
             translate([x0,-wall,retainer_z]) cube([x1-x0,wall+front_lip_h,front_lip_t]);
@@ -167,18 +164,22 @@ module holder() {
             translate([0,profile_contact_h,0]) bottom_profile_bearing();
         }
         cable_void();
+        // Keep tool access to both screw orientations. The lower vertical
+        // screw sits behind the retaining strip, so it gets an access slot.
+        slot_at(mount_x,mount_y-mount_pitch/2,mount_head+1,
+            mount_slot+mount_head-mount_shaft+1,back_t+0.01,frame_front,90);
         // Relieve the entire I/O region, including an unmeasured power-button
         // protrusion. The thin outer rim, not the button or USB plug, carries load.
         translate([transition_start,-1,front_z-block_t-fit])
             cube([kindle_w-2*transition_start,1.05,block_t+2*fit]);
-        for(x=[12,kindle_w-12]) translate([x,lid_screw_y,front_z-12])
+        for(x=lid_screw_x) translate([x,lid_screw_y,front_z-12])
             cylinder(d=lid_pilot,h=15);
     }
 }
 module cover() {
     difference() {
-        prism_at(x0+0.25,lid_y0,x1-x0-0.5,lid_y1-lid_y0,front_z,lid_t,3);
-        for(x=[12,kindle_w-12]) {
+        prism_at(pod_x0+0.25,lid_y0,pod_w-0.5,lid_y1-lid_y0,front_z,lid_t,3);
+        for(x=lid_screw_x) {
             translate([x,lid_screw_y,front_z-0.1]) cylinder(d=lid_clearance,h=lid_t+0.2);
             translate([x,lid_screw_y,front_z+lid_t-1.5]) cylinder(d1=lid_clearance,d2=6.4,h=1.6);
         }
@@ -218,7 +219,7 @@ module output_holder() {
     else holder();
 }
 if(part=="holder") output_holder();
-else if(part=="cover") translate([-x0,-lid_y0,-front_z]) cover();
+else if(part=="cover") translate([-pod_x0,-lid_y0,-front_z]) cover();
 else if(part=="profile_coupon") rotate([90,0,0]) translate([-x0,wall,-front_z+12]) coupon();
 else if(part=="section") intersection() {
     union(){holder();cover();} translate([usb_x-0.3,-bay_h-1,-1]) cube([0.6,kindle_h+bay_h+4,frame_front+2]);

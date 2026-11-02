@@ -72,7 +72,7 @@ After installing the app, check pairing, the Home Assistant dashboard, and devic
 
 ## Wall-mount prototype
 
-A parametric PW1 dock for a German installation box is in [hardware/wall-mount](hardware/wall-mount/). It includes STL exports in `print/`, the measured stepped lower-edge profile, a cable pocket for the existing straight Micro-USB lead and 60 mm mounting-hole spacing. Print the small profile sample first. This is prototype v0.1: rear-shell curvature, port depth, cable bend and physical fit remain unverified; read [the construction notes](hardware/wall-mount/hinweise.txt). It is a mechanical USB holder, not a rated electrical enclosure.
+A compact bottom-support PW1 dock for a German installation box is in [hardware/wall-mount](hardware/wall-mount/). It includes STL exports in `print/`, the measured stepped lower-edge profile, a cable pocket for the existing straight Micro-USB lead and 60 mm mounting-hole spacing. Print the small profile sample first. The front contact area is 80 × 20 mm; the hidden box plate and local cable pocket extend beyond that area. This is prototype v0.2: rear-shell curvature, port depth, cable bend and physical fit remain unverified; read [the construction notes](hardware/wall-mount/hinweise.txt). It is a mechanical USB holder, not a rated electrical enclosure.
 
 ## License
 
